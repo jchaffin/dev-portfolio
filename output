@@ -1,0 +1,4 @@
+
+> dev
+> cross-env NODE_ENV=development babel-node ./devServer.js
+
