@@ -1,32 +1,66 @@
 @import "tailwindcss";
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+:root,
+html {
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f3f4f6;
+  --color-bg-tertiary: #e5e7eb;
+
+  --color-text-primary: #111111;
+  --color-text-secondary: #64748b;
+  --color-text-tertiary: #a1a1aa;
+
+  --color-gradient-primary: linear-gradient(135deg, #2563eb 0%, #a21caf 100%);
+  --color-gradient-secondary: linear-gradient(135deg, #ffe957 0%, #df6602 100%);
+  --color-gradient-tertiary: linear-gradient(135deg, #64748b, #94a3b8);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+html.dark {
+  --color-bg-primary: #1e293b;
+  --color-bg-secondary: #3E495C;
+  --color-bg-tertiary: #334155;
+
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #C0C3C9;
+  --color-text-tertiary: #2D3547;
+
+  --color-gradient-primary: linear-gradient(135deg, #06b6d4 0%, #a78bfa 100%);
+  --color-gradient-secondary: linear-gradient(135deg, #232946 0%, #0f172a 100%);
+  --color-gradient-tertiary: linear-gradient(135deg, #94a3b8, #64748b);
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+
+.bg-surface-primary {
+  color: var(--jc-bg-primary);
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.bg-surface-secondary {
+  color: var(--jc-bg-secondary);
 }
+
+.bg-surface-tertiary {
+  color: var(--jc-bg-tertiary);
+}
+
+.gradient-surface-primary {
+  background: linear-gradient(135deg, var(--jc-gradient-primary) 0%, var(--jc-gradient-tertiary));
+}
+
+.border-gradient-primary {
+  border-image: var(--color-gradient-primary) 1;
+  border-image-slice: 1;
+  border-radius: 10px;
+}
+
+.border-gradient-primary:hover {
+ background-image: var(--color-gradient-primary) ;
+}
+
+/* Custom focus ring using text-primary variable */
+:focus,
+:focus-visible {
+  outline-color: var(--color-text-primary);
+}
+
+
+

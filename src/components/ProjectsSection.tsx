@@ -53,13 +53,13 @@ const ProjectCard = ({ project, index }: { project: Project, index: number }) =>
     initial={{ opacity: 0, y: 50 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, delay: index * 0.1 }}
-    className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 ${
+    className={`rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 bg-[var(--color-bg-secondary)] ${
       project.featured ? 'md:col-span-2' : ''
     }`}
   >
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+        <h3 className="text-xl font-bold ">
           {project.title}
         </h3>
         <div className="flex space-x-2">
@@ -67,7 +67,7 @@ const ProjectCard = ({ project, index }: { project: Project, index: number }) =>
             href={project.github} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            className=""
           >
             <Github size={20} />
           </a>
@@ -75,20 +75,20 @@ const ProjectCard = ({ project, index }: { project: Project, index: number }) =>
             href={project.live} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            className=""
           >
             <ExternalLink size={20} />
           </a>
         </div>
       </div>
-      <p className="text-gray-600 dark:text-gray-400 mb-4">
+      <p className="mb-4 ">
         {project.description}
       </p>
       <div className="flex flex-wrap gap-2">
         {project.tech.map((tech, i) => (
           <span 
             key={i}
-            className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
+            className="px-3 py-1 rounded-full text-sm "
           >
             {tech}
           </span>
@@ -100,7 +100,7 @@ const ProjectCard = ({ project, index }: { project: Project, index: number }) =>
 
 const ProjectsSection = () => {
   return (
-    <section id="projects" className="py-20 bg-white dark:bg-gray-900">
+    <section id="projects" className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -109,10 +109,10 @@ const ProjectsSection = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+          <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent [background-image:var(--color-gradient-primary)]">
             Featured Projects
           </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+          <p className="text-[var(--color-text-secondary)]">
             A showcase of my recent work and contributions
           </p>
         </motion.div>

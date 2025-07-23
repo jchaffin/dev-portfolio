@@ -24,7 +24,7 @@ const AboutSection = () => {
   ]
 
   return (
-    <section id="about" className="py-20 bg-white dark:bg-gray-900">
+    <section id="about" className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -33,10 +33,10 @@ const AboutSection = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+          <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent [background-image:var(--color-gradient-primary)]">
             About Me
           </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+          <p className="text-lg max-w-3xl mx-auto text-[var(--color-text-secondary)]">
             I'm a passionate fullstack developer with expertise in modern web technologies. 
             I love creating efficient, scalable applications that solve real-world problems 
             and deliver exceptional user experiences.
@@ -51,15 +51,15 @@ const AboutSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: index * 0.2 }}
-              className="text-center p-6 bg-gray-50 dark:bg-gray-800 rounded-lg"
+              className="text-center p-6 rounded-lg"
             >
-              <div className="text-blue-500 dark:text-blue-400 mb-4 flex justify-center">
+              <div className="mb-4 flex justify-center">
                 {item.icon}
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+              <h3 className="text-xl font-semibold mb-3 ">
                 {item.title}
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="">
                 {item.description}
               </p>
             </motion.div>
