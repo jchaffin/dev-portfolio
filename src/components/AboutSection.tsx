@@ -36,7 +36,7 @@ const AboutSection = () => {
           <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent [background-image:var(--color-gradient-primary)]">
             About Me
           </h2>
-          <p className="text-lg max-w-3xl mx-auto text-[var(--color-text-secondary)]">
+          <p className="text-lg max-w-3xl mx-auto ">
             I'm a passionate fullstack developer with expertise in modern web technologies. 
             I love creating efficient, scalable applications that solve real-world problems 
             and deliver exceptional user experiences.
