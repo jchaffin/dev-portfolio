@@ -11,10 +11,13 @@
     "dev:webpack": "next dev"
   },
   "dependencies": {
+    "@next/env": "^15.4.3",
     "clsx": "^2.1.0",
+    "install": "^0.13.0",
     "lucide-react": "^0.445.0",
     "motion": "^12.23.3",
     "next": "^15.0.0",
+    "npm": "^11.4.2",
     "react": "^18",
     "react-dom": "^18",
     "tailwind-merge": "^2.2.0"

@@ -19,14 +19,14 @@ const HeroSection = () => {
             <span className="block pb-2">AI Engineer</span>
           </h1>
           <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto ">
-            Building scalable web applications with modern technologies and best practices
+            Building generative AI applications and realtime voice infra
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <motion.a
               href="#projects"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="px-8 py-3 rounded-lg font-semibold transition-all duration-300 "
+              className="px-8 py-3 rounded-lg font-semibold transition-all duration-300 bg-clip-padding text-white [background-image:var(--color-gradient-primary)]"
             >
               View My Work
             </motion.a>

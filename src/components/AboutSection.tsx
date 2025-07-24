@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'motion/react'
-import { Code, Server, Database } from 'lucide-react'
+import {AudioLines, Banknote, ChartBar, Code, Server, Database } from 'lucide-react'
 
 const AboutSection = () => {
   const features = [
@@ -20,6 +20,21 @@ const AboutSection = () => {
       icon: <Database className="h-8 w-8" />,
       title: "DevOps & Cloud",
       description: "AWS, Docker, CI/CD, Monitoring"
+    },
+    {
+      icon: <AudioLines className="h-8 w-8" />,
+      title: "Voice AI",
+      description: "OpenAI realtime, ASR, emotion detection, and more"
+    },
+    {
+      icon: <ChartBar className="h-8 w-8" />,
+      title: "Data Analysis",
+      description: "Python, Pandas, NumPy, Matplotlib"
+    },
+    {
+      icon: <Banknote className="h-8 w-8" />,
+      title: "Finance",
+      description: "Financial Modeling, Portfolio Management, Risk Analysis"
     }
   ]
 
@@ -37,9 +52,7 @@ const AboutSection = () => {
             About Me
           </h2>
           <p className="text-lg max-w-3xl mx-auto ">
-            I'm a passionate fullstack developer with expertise in modern web technologies. 
-            I love creating efficient, scalable applications that solve real-world problems 
-            and deliver exceptional user experiences.
+          I’m a software engineer with a background in Linguistics and Computer Science. I’ve been building voice AI systems that break speech down into tone, intent, and emotion, fast enough to matter in real time. I work across the stack. I like clean interfaces, low latency, and infrastructure that scales. I don\&amp just ship features. I build tools people actually want to use.
           </p>
         </motion.div>
 
