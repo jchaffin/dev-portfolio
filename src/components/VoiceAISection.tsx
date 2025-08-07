@@ -185,7 +185,7 @@ const VoiceAIContent = () => {
       console.log("🤖 HANDING OFF TO MEAGENT - Connecting with MeAgent configuration");
       await connect({
         getEphemeralKey: async () => EPHEMERAL_KEY,
-        initialAgents: selectedAgentConfigSet,
+        initialAgents: selectedAgentConfigSet || [meAgent],
         audioElement: sdkAudioElement,
         outputGuardrails: [], // Temporarily disable guardrails
         extraContext: {
