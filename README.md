@@ -2,7 +2,7 @@
 
 A modern, interactive developer portfolio built with Next.js 15, featuring advanced Voice AI capabilities powered by OpenAI's Realtime API and ElevenLabs voice synthesis.
 
-## 🚀 Features
+## Features
 
 ### Core Portfolio
 - **Responsive Design**: Modern, mobile-first design with smooth animations
@@ -26,7 +26,7 @@ A modern, interactive developer portfolio built with Next.js 15, featuring advan
 - **API Integration**: GitHub projects, contact form, and external services
 - **Environment Configuration**: Secure API key management
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - **Next.js 15** - React framework with App Router
@@ -46,7 +46,7 @@ A modern, interactive developer portfolio built with Next.js 15, featuring advan
 - **PostCSS** - CSS processing
 - **Vercel** - Deployment platform
 
-## 📦 Installation
+## Installation
 
 1. **Clone the repository**
    ```bash
@@ -84,7 +84,7 @@ A modern, interactive developer portfolio built with Next.js 15, featuring advan
 5. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-## 🔧 Available Scripts
+## Available Scripts
 
 - `npm run dev` - Start development server with Turbo
 - `npm run build` - Build for production
@@ -93,7 +93,7 @@ A modern, interactive developer portfolio built with Next.js 15, featuring advan
 - `npm run type-check` - Run TypeScript type checking
 - `npm run dev:webpack` - Start development server with webpack
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
@@ -111,7 +111,7 @@ src/
 └── types/              # TypeScript type definitions
 ```
 
-## 🎯 Key Components
+## Key Components
 
 ### Voice AI Section
 The portfolio features an interactive Voice AI section that allows visitors to:
@@ -128,7 +128,7 @@ The portfolio features an interactive Voice AI section that allows visitors to:
 - **Resume Section**: PDF viewer with downloadable resume
 - **Contact Section**: Contact form with email integration
 
-## 🌐 Deployment
+## Deployment
 
 This project is optimized for deployment on Vercel:
 
@@ -136,7 +136,7 @@ This project is optimized for deployment on Vercel:
 2. **Set environment variables** in Vercel dashboard
 3. **Deploy automatically** on push to main branch
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -144,11 +144,11 @@ This project is optimized for deployment on Vercel:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Next.js](https://nextjs.org/) for the amazing React framework
 - [OpenAI](https://openai.com/) for the Realtime API
@@ -158,4 +158,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Built with ❤️ using Next.js and modern web technologies.
+Built with Next.js and modern web technologies.
