@@ -5,12 +5,10 @@ import { Document, Page, pdfjs } from 'react-pdf'
 
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString();
-
-
+// Configure PDF.js worker
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+}
 
 interface PDFViewerProps {
   pdfUrl: string
@@ -18,16 +16,12 @@ interface PDFViewerProps {
   className?: string
 }
 
-export default function PDFViewer({ pdfUrl, title = 'PDF Document', className = '' }: PDFViewerProps) {
+function PDFViewer({ pdfUrl, title = 'PDF Document', className = '' }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null)
   
   const [pageNumber, setPageNumber] = useState<number>(1)
 
-  const options = useMemo(() => ({
-    cMapUrl: '/cmaps/',
-    standardFontDataUrl: '/standard_fonts/',
-    wasmUrl: '/wasm/',
-  }), []);
+  const options = useMemo(() => ({}), []);
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [pageWidth, setPageWidth] = useState<number>(800)
@@ -156,4 +150,6 @@ export default function PDFViewer({ pdfUrl, title = 'PDF Document', className = 
       )}
     </div>
   )
-} 
+}
+
+export default PDFViewer;
