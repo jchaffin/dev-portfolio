@@ -11,6 +11,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+      },
       colors: {
         'bg-primary': 'var(--color-bg-primary)',
         'bg-secondary': 'var(--color-bg-secondary)',
