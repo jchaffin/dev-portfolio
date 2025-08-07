@@ -1,0 +1,97 @@
+{
+    "summary": "Dynamic AI Engineer with over 5 years of experience in crafting innovative web applications and AI solutions that drive user engagement and operational efficiency. Expertise lies in developing scalable platforms utilizing Node.js, React, and advanced machine learning techniques, particularly in natural language processing. Proven ability to integrate real-time data streams and enhance user interfaces for enterprise-level applications. Committed to leveraging technical acumen and collaborative skills to deliver impactful results in the field of voice AI and customer experience.",
+    "skills": [
+      "Node.js",
+      "Typescript",
+      "Python",
+      "NLP",
+      "Data Science",
+      "GraphQL",
+      "Rust",
+      "Conversational AI"
+    ],
+    "experience": [
+      {
+        "company": "Prosody.ai",
+        "role": "Founder / Infra + Product",
+        "startDate": "2024",
+        "endDate": null,
+        "duration": "2024 Present",
+        "location": "San Francisco, CA",
+        "description": "Built a real-time voice AI infrastructure platform that injects phonetic tone and emotional context into LLMs via a multimodal pipeline. Designed and deployed latency-optimized microservices for acoustic feature extraction, tone modeling, and token conditioning. Integrated WebSocket + REST APIs with Whisper, GPT-4, and LangChain agents for live sentiment augmentation. Created SDK and open API spec; deployed dashboard in Next.js + WebRTC with real-time charts using Recharts. Led full-stack architecture including Dockerized backend, CI/CD workflows, LLM fine-tuning, and synthetic data generation.",
+        "keywords": [
+          "real-time voice AI",
+          "microservices",
+          "WebSocket",
+          "REST APIs",
+          "Whisper",
+          "GPT-4",
+          "LangChain",
+          "SDK"
+        ],
+        "isCurrentRole": true
+      },
+      {
+        "company": "Uniphore",
+        "role": "Voice AI Engineer",
+        "startDate": "September 2021",
+        "endDate": "October 2024",
+        "duration": "September 2021 October 2024",
+        "location": "Hybrid (Palo Alto, CA)",
+        "description": "Developed modular UI components and dynamic pages for agent-assist tools using Next.js, React, and GraphQL, integrating live ASR and voice analytics. Engineered real-time sentiment visualization layers with phonetic and lexical embeddings for enhanced client-side rendering. Streamlined SSR/ISR logic for data-heavy voice sessions, improving initial load times by 35%. Modernized analytics pipelines to support LLM-driven conversational interfaces, implementing deep tone-aware inference. Built internal analytics tools with NumPy, Pandas, Jupyter, and Python for behavioral insights.",
+        "keywords": [
+          "Next.js",
+          "React",
+          "GraphQL",
+          "ASR",
+          "voice analytics",
+          "phonetic embeddings",
+          "SSR/ISR",
+          "behavioral insights"
+        ],
+        "isCurrentRole": false
+      },
+      {
+        "company": "Wave Computing",
+        "role": "Software Engineer",
+        "startDate": "June 2018",
+        "endDate": "September 2020",
+        "duration": "June 2018 September 2020",
+        "location": "Campbell, CA",
+        "description": "Developed and optimized neural networks for audio and vision classification using PyTorch. Built and deployed machine learning models utilizing TensorFlow, enhancing model accuracy through extensive data analysis. Created full-stack applications for administrative login and data transfer with Node.js and React, integrating GraphQL for efficient data querying. Designed and maintained an interactive visualization tool for error tracing on Wave's proprietary DPU-based compiler. Collaborated with cross-functional teams to integrate AI solutions into products, researching cutting-edge techniques in natural language processing.",
+        "keywords": [
+          "PyTorch",
+          "TensorFlow",
+          "Node.js",
+          "React",
+          "GraphQL",
+          "DPU-based compiler",
+          "error tracing"
+        ],
+        "isCurrentRole": false
+      }
+    ],
+    "education": [
+      {
+        "institution": "University of California, Los Angeles",
+        "degree": "Bachelor of Science",
+        "field": "Linguistics and Computer Science",
+        "year": "2020",
+        "gpa": null,
+        "honors": null
+      }
+    ],
+    "contact": {
+      "email": "jchaffin57@gmail.com",
+      "phone": "6503803288",
+      "location": "SF Bay Area, United States",
+      "linkedin": "",
+      "github": "",
+      "website": ""
+    },
+    "ats_score": "85",
+    "ats_recommendations": [
+      "Include more action verbs to enhance achievements descriptions.",
+      "Add more specific metrics to concretely demonstrate impact."
+    ]
+  }

@@ -52,7 +52,7 @@ const AboutSection = () => {
             About Me
           </h2>
           <p className="text-lg max-w-3xl mx-auto ">
-          I’m a software engineer with a background in Linguistics and Computer Science. I’ve been building voice AI systems that break speech down into tone, intent, and emotion, fast enough to matter in real time. I work across the stack. I like clean interfaces, low latency, and infrastructure that scales. I don\&amp just ship features. I build tools people actually want to use.
+          Dynamic Fullstack Engineer with 5+ years of experience specializing in Voice AI and conversational technologies. Expertise encompasses nbuilding advanced real-time voice AI infrastructures and developing modular UI components that enhance user interaction. Proficient in leveraging technologies such as Node.js, Typescript, and Python to create efficient, latency-optimized solutions. Known for integrating complex APIs and modernizing analytics pipelines to drive insightful data-driven decisions. A proven track record in delivering innovative software solutions that elevate user experience and operational efficiency.
           </p>
         </motion.div>
 

@@ -1,5 +1,50 @@
 @import "tailwindcss";
 
+/* React PDF Styles */
+.react-pdf__Page {
+  margin: 1em auto;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+.react-pdf__Page__canvas {
+  display: block;
+  user-select: none;
+}
+
+.react-pdf__Page__textContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1.0;
+}
+
+.react-pdf__Page__textContent--disabled {
+  opacity: 0;
+}
+
+.react-pdf__Page__annotations {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1.0;
+}
+
+.react-pdf__Page__annotations--disabled {
+  opacity: 0;
+}
+
+.react-pdf__Page__annotation {
+  position: absolute;
+}
+
 :root,
 html {
   --color-bg-primary: #ffffff;
@@ -29,6 +74,58 @@ html.dark {
   --color-gradient-tertiary: linear-gradient(135deg, #94a3b8, #64748b);
 }
 
+/* Gradient Utility Classes */
+.gradient-text-primary {
+  background-image: var(--color-gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.gradient-bg-primary {
+  background-image: var(--color-gradient-primary);
+}
+
+.gradient-bg-secondary {
+  background-image: var(--color-gradient-secondary);
+}
+
+.gradient-bg-tertiary {
+  background-image: var(--color-gradient-tertiary);
+}
+
+/* Button gradient utilities */
+.btn-gradient-primary {
+  background-image: var(--color-gradient-primary);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn-gradient-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.btn-outline-gradient {
+  border: 2px solid transparent;
+  background: linear-gradient(white, white) padding-box,
+              var(--color-gradient-primary) border-box;
+  color: var(--color-text-primary);
+  transition: all 0.3s ease;
+}
+
+.dark .btn-outline-gradient {
+  background: linear-gradient(var(--color-bg-primary), var(--color-bg-primary)) padding-box,
+              var(--color-gradient-primary) border-box;
+  color: var(--color-text-primary);
+}
+
+.btn-outline-gradient:hover {
+  background: var(--color-gradient-primary);
+  color: white;
+}
+
 
 .bg-surface-primary {
   color: var(--jc-bg-primary);
@@ -40,10 +137,6 @@ html.dark {
 
 .bg-surface-tertiary {
   color: var(--jc-bg-tertiary);
-}
-
-.gradient-surface-primary {
-  background: linear-gradient(135deg, var(--jc-gradient-primary) 0%, var(--jc-gradient-tertiary));
 }
 
 .border-gradient-primary {

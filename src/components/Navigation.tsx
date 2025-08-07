@@ -17,7 +17,7 @@ const Navigation = () => {
             <ThemeToggle />
             <div className="hidden md:block">
               <div className="ml-10 flex items-baseline space-x-4">
-                {['About', 'Skills', 'Projects', 'Contact'].map((item) => (
+                {['About', 'Skills', 'Projects', 'Resume', 'Contact'].map((item) => (
                   <a
                     key={item}
                     href={`#${item.toLowerCase()}`}
