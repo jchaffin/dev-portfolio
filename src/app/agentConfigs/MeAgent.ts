@@ -1,4 +1,5 @@
 import { RealtimeAgent, tool, RealtimeItem } from '@openai/agents/realtime';
+import { projects, skills, experiences } from '@/data/portfolio';
 
 export const meAgent = new RealtimeAgent({
   name: 'MeAgent',
@@ -157,12 +158,159 @@ ABSOLUTE LANGUAGE RULE: You are HARDCODED to speak English only. You CANNOT spea
       },
       execute: async (input: any) => {
         const { section } = input;
-        // Navigate to the specified section
-        const element = document.getElementById(section);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
+        
+        // Check if we're in a browser environment
+        if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+          // Navigate to the specified section
+          const element = document.getElementById(section);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+            return { success: true, section, message: `Scrolled to ${section} section` };
+          } else {
+            return { success: false, section, message: `Section '${section}' not found` };
+          }
+        } else {
+          // Server-side fallback
+          return { success: true, section, message: `Would navigate to ${section} section` };
         }
-        return { success: true, section };
+      }
+    }),
+    tool({
+      name: 'get_project_info',
+      description: 'Get detailed information about Jacob\'s projects',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_name: {
+            type: 'string',
+            description: 'Name of the project to get information about (optional - if not provided, returns all projects)'
+          }
+        },
+        required: [],
+        additionalProperties: false
+      },
+      execute: async (input: any) => {
+        const { project_name } = input;
+        
+        if (project_name) {
+          const project = projects.find(p => 
+            p.title.toLowerCase().includes(project_name.toLowerCase()) ||
+            p.description.toLowerCase().includes(project_name.toLowerCase())
+          );
+          
+          if (project) {
+            return {
+              success: true,
+              project: {
+                title: project.title,
+                description: project.description,
+                tech: project.tech,
+                github: project.github,
+                live: project.live,
+                category: project.category,
+                featured: project.featured
+              }
+            };
+          } else {
+            return { success: false, message: `Project "${project_name}" not found` };
+          }
+        } else {
+          // Return all projects
+          return {
+            success: true,
+            projects: projects.map(p => ({
+              title: p.title,
+              description: p.description,
+              tech: p.tech,
+              category: p.category,
+              featured: p.featured
+            }))
+          };
+        }
+      }
+    }),
+    tool({
+      name: 'get_skills_info',
+      description: 'Get information about Jacob\'s technical skills',
+      parameters: {
+        type: 'object',
+        properties: {
+          category: {
+            type: 'string',
+            enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'Language', 'API', 'Tools'],
+            description: 'Category of skills to get (optional - if not provided, returns all skills)'
+          }
+        },
+        required: [],
+        additionalProperties: false
+      },
+      execute: async (input: any) => {
+        const { category } = input;
+        
+        if (category) {
+          const filteredSkills = skills.filter(s => s.category === category);
+          return {
+            success: true,
+            category,
+            skills: filteredSkills.map(s => ({
+              name: s.name,
+              level: s.level,
+              category: s.category
+            }))
+          };
+        } else {
+          return {
+            success: true,
+            skills: skills.map(s => ({
+              name: s.name,
+              level: s.level,
+              category: s.category
+            }))
+          };
+        }
+      }
+    }),
+    tool({
+      name: 'get_github_repos',
+      description: 'Get Jacob\'s recent GitHub repositories',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: [],
+        additionalProperties: false
+      },
+      execute: async () => {
+        try {
+          // Fetch from the GitHub projects API
+          const response = await fetch('/api/github-projects');
+          if (!response.ok) {
+            return { success: false, message: 'Failed to fetch GitHub repositories' };
+          }
+          
+          const repos = await response.json();
+          const oneYearAgo = new Date();
+          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+          
+          const recentRepos = repos
+            .filter((repo: any) => new Date(repo.pushed_at) > oneYearAgo)
+            .sort((a: any, b: any) => new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime())
+            .slice(0, 10) // Get top 10 most recent
+            .map((repo: any) => ({
+              name: repo.name,
+              description: repo.description || 'No description',
+              language: repo.language || 'Unknown',
+              topics: repo.topics || [],
+              url: repo.html_url,
+              pushed_at: repo.pushed_at
+            }));
+          
+          return {
+            success: true,
+            repositories: recentRepos
+          };
+        } catch (error) {
+          return { success: false, message: 'Error fetching GitHub repositories' };
+        }
       }
     })
   ]

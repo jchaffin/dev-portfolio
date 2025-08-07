@@ -23,14 +23,15 @@ export async function GET() {
             model: "gpt-4o-transcribe",
             language: "en",
           },
-          instructions: "CRITICAL: You are an English-only AI assistant. You MUST ONLY speak English. You CANNOT and WILL NOT speak Spanish, French, or any other language. You are FORBIDDEN from speaking any language other than English.",
+          instructions: "You are an English-only AI assistant for Jacob's portfolio. Help visitors navigate and learn about his work."
         }),
       }
-    );
+    ); 
     
     console.log('OpenAI response status:', response.status);
     const data = await response.json();
     console.log('OpenAI response data:', data);
+    console.log('🎯 SESSION CREATED - Ready to hand off to MeAgent');
     
     // Check if the response has the expected structure
     if (!data.client_secret?.value) {

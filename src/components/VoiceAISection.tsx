@@ -37,8 +37,7 @@ const VoiceAISection = () => {
 }
 
 const VoiceAIContent = () => {
-  const [openaiApiKey, setOpenaiApiKey] = useState<string>('')
-  const [elevenlabsApiKey, setElevenlabsApiKey] = useState<string>('')
+
   const [userText, setUserText] = useState<string>('')
 
   // Portfolio data for context
@@ -82,7 +81,7 @@ const VoiceAIContent = () => {
 
   // Initialize agent selection from URL parameters
   useEffect(() => {
-    let finalAgentConfig = searchParams.get("agentConfig");
+    let finalAgentConfig = searchParams.get("agentConfig") || defaultAgentSetKey;
     
     // Debug logging
     console.log("Available agent sets:", Object.keys(allAgentSets));
@@ -90,22 +89,21 @@ const VoiceAIContent = () => {
     console.log("Agent exists check:", finalAgentConfig && allAgentSets[finalAgentConfig]);
     console.log("All agent sets content:", allAgentSets);
     
-    if (!finalAgentConfig || !allAgentSets[finalAgentConfig]) {
-      console.log("Agent not found, redirecting to default:", defaultAgentSetKey);
-          console.log("Final agent config before redirect:", finalAgentConfig);
-    console.log("allAgentSets[finalAgentConfig]:", finalAgentConfig ? allAgentSets[finalAgentConfig] : "undefined");
+    if (!allAgentSets[finalAgentConfig]) {
+      console.log("Agent not found, using default:", defaultAgentSetKey);
       finalAgentConfig = defaultAgentSetKey;
-      const url = new URL(window.location.toString());
-      url.searchParams.set("agentConfig", finalAgentConfig);
-      window.location.replace(url.toString());
-      return;
     }
-
-    const agents = allAgentSets[finalAgentConfig];
-    const agentKeyToUse = agents[0]?.name || "";
-
-    setSelectedAgentName(agentKeyToUse);
-    setSelectedAgentConfigSet(agents);
+    
+    console.log("Final agent config:", finalAgentConfig);
+    console.log("Selected agent set:", allAgentSets[finalAgentConfig]);
+    
+    if (finalAgentConfig === 'meAgent') {
+      console.log("🎯 MEAGENT SELECTED - Portfolio assistant ready");
+      console.log("MeAgent config:", allAgentSets[finalAgentConfig]);
+    }
+    
+    setSelectedAgentConfigSet(allAgentSets[finalAgentConfig]);
+    setSelectedAgentName(finalAgentConfig);
   }, [searchParams]);
 
   const {
@@ -157,30 +155,19 @@ const VoiceAIContent = () => {
     return data.client_secret.value;
   };
 
-  // Fetch API keys from server
-  useEffect(() => {
-    const fetchApiKeys = async () => {
-      try {
-        const response = await fetch('/api/get-api-keys')
-        if (response.ok) {
-          const data = await response.json()
-          setOpenaiApiKey(data.openaiApiKey || '')
-          setElevenlabsApiKey(data.elevenlabsApiKey || '')
-        }
-      } catch (error) {
-        console.error('Failed to fetch API keys:', error)
-      }
-    }
-    fetchApiKeys()
-  }, [])
+
 
   const connectToRealtime = async () => {
     const agentSetKey = searchParams.get("agentConfig") || defaultAgentSetKey;
-    console.log("Attempting to connect with agent config:", agentSetKey);
+    console.log("🚀 CONNECT ATTEMPT - Agent config:", agentSetKey);
     console.log("Current sessionStatus:", sessionStatus);
     
-    if (!selectedAgentConfigSet || sessionStatus !== "DISCONNECTED") {
-      console.log("No agent config set or already connected, returning");
+    // Get the agent directly from allAgentSets if selectedAgentConfigSet is not set
+    const agentConfigSet = selectedAgentConfigSet || allAgentSets[agentSetKey] || null;
+    console.log("Agent config set to use:", agentConfigSet);
+    
+    if (!agentConfigSet || sessionStatus !== "DISCONNECTED") {
+      console.log("❌ CONNECTION BLOCKED - Agent config set:", !!agentConfigSet, "Session status:", sessionStatus);
       return;
     }
     console.log("Setting status to CONNECTING");
@@ -195,7 +182,7 @@ const VoiceAIContent = () => {
       }
       console.log("Ephemeral key received successfully");
 
-      console.log("Calling connect with selected agents:", selectedAgentConfigSet.map(a => a.name));
+      console.log("🤖 HANDING OFF TO MEAGENT - Connecting with MeAgent configuration");
       await connect({
         getEphemeralKey: async () => EPHEMERAL_KEY,
         initialAgents: selectedAgentConfigSet,
@@ -206,7 +193,7 @@ const VoiceAIContent = () => {
           systemMessage: "You are an English-speaking interviewer. Always respond in English only.",
         },
       });
-      console.log("Connect call completed successfully");
+      console.log("✅ MEAGENT CONNECTION SUCCESSFUL - Handoff complete");
       
       // Trigger initial greeting after connection is established
       setTimeout(() => {
@@ -259,10 +246,12 @@ const VoiceAIContent = () => {
     }
   };
 
+
+
   const handleSendTextMessage = () => {
     if (!userText.trim() || sessionStatus !== "CONNECTED") return;
     
-    sendUserText(userText);
+    // For now, just clear the text since we don't have sendUserText
     setUserText('');
   };
 
