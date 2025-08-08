@@ -6,7 +6,7 @@ export type Project = {
   live: string;
 };
 
-export async function getRecentGitHubProjects(): Promise<Project[]> {
+export async function getProjects(): Promise<Project[]> {
   const res = await fetch('/api/projects', {
     // cache: 'no-store' // Uncomment if you want to always fetch fresh
   });

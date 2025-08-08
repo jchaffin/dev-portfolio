@@ -167,10 +167,19 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     [callbacks, updateStatus],
   );
 
-  const disconnect = useCallback(() => {
-    sessionRef.current?.close();
-    sessionRef.current = null;
-    updateStatus('DISCONNECTED');
+  const disconnect = useCallback(async () => {
+    if (sessionRef.current) {
+      try {
+        await sessionRef.current.close();
+      } catch (error) {
+        console.error('Error closing session:', error);
+      } finally {
+        sessionRef.current = null;
+        updateStatus('DISCONNECTED');
+      }
+    } else {
+      updateStatus('DISCONNECTED');
+    }
   }, [updateStatus]);
 
   const assertconnected = () => {

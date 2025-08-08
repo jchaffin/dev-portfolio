@@ -3,7 +3,18 @@ export * from './realtime'
 export interface Skill {
   name: string
   level: number
-  category: 'Frontend' | 'Backend' | 'Database' | 'DevOps' | 'Language' | 'API' | 'Tools'
+  category: string
+  calculation?: {
+    frequency: number
+    maxFrequency: number
+    sources: string[]
+    breakdown: {
+      projects: number
+      experience: number
+      resumeSkills: number
+    }
+  }
+  subSkills?: string[]
 }
 
 export interface Project {

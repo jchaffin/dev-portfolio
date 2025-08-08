@@ -3,11 +3,11 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { useSearchParams } from "next/navigation";
-import { Activity, FileText, Volume2, Code } from 'lucide-react'
+import { Activity, FileText, Volume2, Code, Send } from 'lucide-react'
 import { experiences, projects, skills } from '@/data/portfolio'
+import resumeData from '@/data/sample-resume.json'
 import { v4 as uuidv4 } from "uuid";
-
-import Transcript from './Transcript'
+import ReactMarkdown from "react-markdown";
 
 // Types
 import { SessionStatus } from "@/types";
@@ -45,13 +45,27 @@ const VoiceAIContent = () => {
     experiences,
     projects: projects.filter(p => p.featured),
     skills: skills.slice(0, 8), // Top skills
-    summary: "Dynamic Fullstack Engineer with 5+ years of experience specializing in Voice AI and conversational technologies."
+    summary: "Dynamic Voice AI Engineer with 5+ years of experience specializing in real-time voice AI infrastructure and conversational technologies.",
+    resume: {
+      workExperience: experiences,
+      technicalSkills: skills,
+      projects: projects,
+      summary: "Open to opportunities in realtime voice AI, MCP and AG-UI protocol implementations, and agentic systems."
+    },
+    // Complete resume data
+    completeResume: {
+      summary: resumeData.summary,
+      skills: resumeData.skills,
+      experience: resumeData.experience,
+      education: resumeData.education,
+      contact: resumeData.contact,
+    }
   }
   const searchParams = useSearchParams()!;
   const urlCodec = searchParams.get("codec") || "opus";
   
   const { loggedEvents } = useEvent();
-  const { transcriptItems, addTranscriptBreadcrumb } = useTranscript();
+  const { transcriptItems, addTranscriptBreadcrumb, clearTranscript } = useTranscript();
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
@@ -71,6 +85,7 @@ const VoiceAIContent = () => {
   const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<
     RealtimeAgent[] | null
   >(null);
+  const [microphoneStream, setMicrophoneStream] = useState<MediaStream | null>(null);
 
   // Attach SDK audio element once it exists (after first render in browser)
   useEffect(() => {
@@ -182,15 +197,22 @@ const VoiceAIContent = () => {
       }
       console.log("Ephemeral key received successfully");
 
-      console.log("🤖 HANDING OFF TO MEAGENT - Connecting with MeAgent configuration");
+      console.log("🤖 CONNECTING - Agent config set:", agentConfigSet);
+      console.log("🤖 AGENT NAMES:", agentConfigSet?.map(agent => agent.name));
       await connect({
         getEphemeralKey: async () => EPHEMERAL_KEY,
-        initialAgents: selectedAgentConfigSet || [meAgent],
+        initialAgents: agentConfigSet,
         audioElement: sdkAudioElement,
         outputGuardrails: [], // Temporarily disable guardrails
         extraContext: {
           addTranscriptBreadcrumb,
-          systemMessage: "You are an English-speaking interviewer. Always respond in English only.",
+          portfolioContext,
+          systemMessage: `You are an English-speaking AI assistant for Jacob Chaffin's portfolio. You have access to his complete portfolio data including work experience, technical skills, and projects. 
+
+PORTFOLIO CONTEXT:
+${JSON.stringify(portfolioContext, null, 2)}
+
+You can answer detailed questions about Jacob's professional background, specific projects, technologies he's worked with, and career achievements. Always respond in English only.`,
         },
       });
       console.log("✅ MEAGENT CONNECTION SUCCESSFUL - Handoff complete");
@@ -208,8 +230,23 @@ const VoiceAIContent = () => {
   };
 
   const disconnectFromRealtime = () => {
+    console.log("🛑 DISCONNECTING - Stopping microphone and cleaning up");
+    
+    // Stop the active microphone stream
+    if (microphoneStream) {
+      microphoneStream.getTracks().forEach(track => {
+        console.log("Stopping microphone track:", track.kind);
+        track.stop();
+      });
+      setMicrophoneStream(null);
+    }
+    
+    // Disconnect from the SDK
     disconnect();
     setSessionStatus("DISCONNECTED");
+    clearTranscript();
+    
+    console.log("✅ DISCONNECTED - Microphone stopped and session cleaned up");
   };
 
   const sendSimulatedUserMessage = (text: string) => {
@@ -270,7 +307,7 @@ const VoiceAIContent = () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log("Microphone permission granted");
-        stream.getTracks().forEach(track => track.stop()); // Stop the test stream
+        setMicrophoneStream(stream); // Store the stream for later cleanup
         
         connectToRealtime();
       } catch (error) {
@@ -359,12 +396,25 @@ const VoiceAIContent = () => {
     };
   }, [sessionStatus]);
 
+  // Cleanup microphone on component unmount
+  useEffect(() => {
+    return () => {
+      if (microphoneStream) {
+        console.log("🧹 CLEANUP - Stopping microphone on component unmount");
+        microphoneStream.getTracks().forEach(track => {
+          track.stop();
+        });
+        setMicrophoneStream(null);
+      }
+    };
+  }, [microphoneStream]);
+
   return (
-    <section id="voice-ai" className="py-20 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 relative overflow-hidden">
+    <section id="voice-ai" className="py-20 bg-gradient-primary dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 opacity-10">
         <motion.div
-          className="absolute top-20 left-20 w-32 h-32 bg-purple-500 rounded-full blur-xl"
+          className="absolute top-20 left-20 w-32 h-32 bg-accent-secondary rounded-full blur-xl"
           animate={{
             x: [0, 100, 0],
             y: [0, -50, 0],
@@ -376,7 +426,7 @@ const VoiceAIContent = () => {
           }}
         />
         <motion.div
-          className="absolute bottom-20 right-20 w-24 h-24 bg-blue-500 rounded-full blur-xl"
+          className="absolute bottom-20 right-20 w-24 h-24 bg-accent-primary rounded-full blur-xl"
           animate={{
             x: [0, -80, 0],
             y: [0, 60, 0],
@@ -398,10 +448,10 @@ const VoiceAIContent = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">
-            Jacob's Voice Agent
+          <h2 className="text-4xl md:text-6xl font-bold mb-6 text-primary">
+          Voice Agent
           </h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+          <p className="text-xl text-secondary max-w-3xl mx-auto">
             OpenAI Realtime API powered voice assistant with portfolio data access
           </p>
         </motion.div>
@@ -412,58 +462,77 @@ const VoiceAIContent = () => {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="max-w-4xl mx-auto"
+          className="w-full flex justify-center"
         >
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700 overflow-hidden">
+          <div className="w-full max-w-4xl bg-blue-400 glass rounded-xl border border-theme-primary/30 overflow-hidden shadow-lg">
             {/* Header */}
-            <div className="bg-gray-700/50 p-6 border-b border-gray-600">
+            <div className="bg-transparent backdrop-blur-xl p-6 border-b border-theme-primary/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${sessionStatus === 'CONNECTED' ? 'bg-green-400' : 'bg-red-400'} animate-pulse`}></div>
-                  <h3 className="text-xl font-semibold text-white">Jacob's AI Assistant</h3>
+                  <div className={`w-3 h-3 rounded-full ${sessionStatus === 'CONNECTED' ? 'bg-accent-success' : 'bg-accent-error'} animate-pulse`}></div>
+                  <h3 className="text-xl font-semibold text-theme-primary">Jacob's AI Assistant</h3>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="text-xs text-gray-400">
-                    {sessionStatus === 'CONNECTED' ? 'Connected' : 'Disconnected'}
-                  </div>
+                  <button
+                    onClick={onToggleConnection}
+                    className={`text-xs font-medium transition-all duration-300 cursor-pointer ${
+                      sessionStatus === 'CONNECTED' 
+                        ? 'text-red-500 hover:text-red-400' 
+                        : 'text-blue-500 hover:text-blue-400'
+                    }`}
+                  >
+                    {sessionStatus === 'CONNECTED' ? 'Disconnect' : 'Connect'}
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Transcript */}
+            {/* Messages */}
             <div className="h-96 overflow-y-auto p-6">
-              <Transcript 
-                userText={userText}
-                setUserText={setUserText}
-                onSendMessage={handleSendTextMessage}
-                downloadRecording={downloadRecording}
-                canSend={sessionStatus === "CONNECTED"}
-              />
+              <div className="flex flex-col gap-y-4">
+                {transcriptItems
+                  .filter(item => item.type === "MESSAGE" && !item.isHidden)
+                  .sort((a, b) => a.createdAtMs - b.createdAtMs)
+                  .map((item) => {
+                    const isUser = item.role === "user";
+                    const title = item.title || "";
+                    const displayTitle = title.startsWith("[") && title.endsWith("]") 
+                      ? title.slice(1, -1) 
+                      : title;
+
+                    return (
+                      <div key={item.itemId} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-lg p-3 rounded-xl ${
+                          isUser 
+                            ? "bg-accent-secondary text-white" 
+                            : "bg-theme-tertiary text-theme-primary"
+                        }`}>
+                          <div className={`text-xs font-mono mb-1 ${
+                            isUser ? "text-white/80" : "text-theme-secondary"
+                          }`}>
+                            {item.timestamp}
+                          </div>
+                          <div className="whitespace-pre-wrap">
+                            <ReactMarkdown>{displayTitle}</ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
 
             {/* Controls */}
-            <div className="p-6 border-t border-gray-600">
-              <div className="flex items-center gap-4 mb-4">
-                <button
-                  onClick={onToggleConnection}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-300 ${
-                    sessionStatus === 'CONNECTED'
-                      ? 'bg-red-500 hover:bg-red-600 text-white' 
-                      : 'bg-purple-500 hover:bg-purple-600 text-white'
-                  }`}
-                >
-                  {sessionStatus === 'CONNECTED' ? 'Disconnect' : 'Connect'}
-                </button>
-              </div>
-
+            <div className="p-6 border-t border-theme-primary/20 bg-transparent backdrop-blur-xl">
               {/* Text Input */}
               <div className="flex gap-2">
                 <input
+                
                   type="text"
                   value={userText}
                   onChange={(e) => setUserText(e.target.value)}
                   placeholder="Type your message here..."
-                  className="flex-1 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 px-4 py-2 rounded-lg"
+                  className="flex-1 bg-theme-tertiary border border-theme-secondary text-theme-primary placeholder-theme-secondary px-4 py-2 rounded-lg"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       handleSendTextMessage();
@@ -473,9 +542,9 @@ const VoiceAIContent = () => {
                 <button
                   onClick={handleSendTextMessage}
                   disabled={sessionStatus !== 'CONNECTED'}
-                  className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                  className="px-4 py-2 bg-accent-secondary hover:bg-accent-secondary/80 text-white rounded-lg disabled:opacity-50 flex items-center justify-center"
                 >
-                  Send
+                  <Send className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -513,15 +582,15 @@ const VoiceAIContent = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: index * 0.2 }}
-              className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-purple-500 transition-colors"
+              className="glass rounded-xl p-6"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-white">{feature.title}</h3>
+                <h3 className="text-xl font-semibold text-theme-primary">{feature.title}</h3>
               </div>
-              <p className="text-gray-300">{feature.description}</p>
+              <p className="text-theme-secondary">{feature.description}</p>
             </motion.div>
           ))}
         </motion.div>

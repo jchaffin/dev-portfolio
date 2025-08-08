@@ -16,8 +16,8 @@ export default function GradientText({
 }: GradientTextProps) {
   const gradientClasses = {
     primary: 'gradient-text-primary',
-    secondary: 'bg-clip-text text-transparent [background-image:var(--color-gradient-secondary)]',
-    tertiary: 'bg-clip-text text-transparent [background-image:var(--color-gradient-tertiary)]'
+    secondary: 'gradient-text-secondary',
+    tertiary: 'gradient-text-tertiary'
   }
 
   return (

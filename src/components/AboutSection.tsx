@@ -39,8 +39,8 @@ const AboutSection = () => {
   ]
 
   return (
-    <section id="about" className="py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="about" className="py-20 relative overflow-hidden bg-theme-primary">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -48,11 +48,11 @@ const AboutSection = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent [background-image:var(--color-gradient-primary)]">
+          <h2 className="text-4xl font-bold mb-6 text-theme-primary">
             About Me
           </h2>
-          <p className="text-lg max-w-3xl mx-auto ">
-          Dynamic Fullstack Engineer with 5+ years of experience specializing in Voice AI and conversational technologies. Expertise encompasses nbuilding advanced real-time voice AI infrastructures and developing modular UI components that enhance user interaction. Proficient in leveraging technologies such as Node.js, Typescript, and Python to create efficient, latency-optimized solutions. Known for integrating complex APIs and modernizing analytics pipelines to drive insightful data-driven decisions. A proven track record in delivering innovative software solutions that elevate user experience and operational efficiency.
+          <p className="text-lg max-w-3xl mx-auto text-theme-secondary">
+          Dynamic Voice AI Engineer with 5+ years of experience specializing in real-time voice AI infrastructure and conversational technologies. Expertise encompasses building advanced real-time voice AI systems and developing modular UI components that enhance user interaction. Proficient in leveraging technologies such as Node.js, Typescript, and Python to create efficient, latency-optimized solutions. Known for integrating complex APIs and modernizing analytics pipelines to drive insightful data-driven decisions. A proven track record in delivering innovative voice AI solutions that elevate user experience and operational efficiency.
           </p>
         </motion.div>
 
@@ -64,15 +64,17 @@ const AboutSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: index * 0.2 }}
-              className="text-center p-6 rounded-lg"
+              className="glass rounded-2xl p-6 text-center"
             >
               <div className="mb-4 flex justify-center">
-                {item.icon}
+                <div className="text-accent-primary">
+                  {item.icon}
+                </div>
               </div>
-              <h3 className="text-xl font-semibold mb-3 ">
+              <h3 className="text-lg font-semibold text-theme-primary">
                 {item.title}
               </h3>
-              <p className="">
+              <p className="mt-1 text-theme-secondary text-sm">
                 {item.description}
               </p>
             </motion.div>

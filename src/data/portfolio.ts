@@ -1,20 +1,78 @@
 import { Skill, Project } from '@/types'
-import { SKILL_CATEGORIES, PROJECT_CATEGORIES } from '@/lib/constants'
+import { PROJECT_CATEGORIES } from '@/lib/constants'
+import resumeData from './sample-resume.json'
 
-export const skills: Skill[] = [
-  { name: 'React/Next.js', level: 95, category: SKILL_CATEGORIES.FRONTEND },
-  { name: 'TypeScript', level: 90, category: SKILL_CATEGORIES.LANGUAGE },
-  { name: 'Node.js', level: 88, category: SKILL_CATEGORIES.BACKEND },
-  { name: 'PostgreSQL', level: 85, category: SKILL_CATEGORIES.DATABASE },
-  { name: 'AWS/Cloud', level: 82, category: SKILL_CATEGORIES.DEVOPS },
-  { name: 'Docker', level: 80, category: SKILL_CATEGORIES.DEVOPS },
-  { name: 'GraphQL', level: 75, category: SKILL_CATEGORIES.API },
-  { name: 'Python', level: 78, category: SKILL_CATEGORIES.LANGUAGE },
-  { name: 'MongoDB', level: 80, category: SKILL_CATEGORIES.DATABASE },
-  { name: 'Redis', level: 75, category: SKILL_CATEGORIES.DATABASE },
-  { name: 'Tailwind CSS', level: 92, category: SKILL_CATEGORIES.FRONTEND },
-  { name: 'Express.js', level: 85, category: SKILL_CATEGORIES.BACKEND },
-]
+// Calculate skill level based on frequency in resume experience only (avoiding circular dependency)
+const calculateSkillLevel = (skillName: string): number => {
+  let frequency = 0;
+  let maxFrequency = 0;
+  
+  // Count frequency in resume experience
+  resumeData.experience?.forEach(exp => {
+    const expText = `${exp.role} ${exp.description} ${(exp.keywords || []).join(' ')}`.toLowerCase();
+    const skillLower = skillName.toLowerCase();
+    
+    if (expText.includes(skillLower)) {
+      frequency += 1;
+    }
+    
+    // Check keywords specifically (higher weight)
+    if (exp.keywords?.some(keyword => keyword.toLowerCase().includes(skillLower))) {
+      frequency += 2;
+    }
+  });
+  
+  // Count frequency in resume skills (highest weight)
+  if (resumeData.skills?.some(skill => skill.toLowerCase().includes(skillName.toLowerCase()))) {
+    frequency += 3;
+  }
+  
+  // Calculate max possible frequency for normalization
+  maxFrequency = (resumeData.experience?.length || 0) * 3 + 3;
+  
+  // Convert to percentage (70-95 range for realistic levels)
+  const percentage = Math.min(95, Math.max(70, 70 + (frequency / maxFrequency) * 25));
+  
+  return Math.round(percentage);
+};
+
+
+
+// Extract skills from resume data and map them to Skill objects
+const extractSkillsFromResume = (): Skill[] => {
+  const resumeSkills = resumeData.skills || [];
+  
+
+
+  // Create Skill objects from resume skills with dynamic levels (no hardcoded categories)
+  const skillsFromResume = resumeSkills.map(skillName => {
+    return {
+      name: skillName,
+      level: calculateSkillLevel(skillName),
+      category: 'Other' // Will be categorized by semantic analysis
+    };
+  });
+
+  // Add additional skills from experience keywords
+  const allKeywords = resumeData.experience?.flatMap(exp => exp.keywords || []) || [];
+  const additionalSkills = allKeywords
+    .filter(keyword => !resumeSkills.includes(keyword))
+    .map(keyword => {
+      return {
+        name: keyword,
+        level: calculateSkillLevel(keyword),
+        category: 'Other' // Will be categorized by semantic analysis
+      };
+    });
+
+  // Combine and remove duplicates
+  const allSkills = [...skillsFromResume, ...additionalSkills];
+  const uniqueSkills = allSkills.filter((skill, index, self) => 
+    index === self.findIndex(s => s.name === skill.name)
+  );
+
+  return uniqueSkills.sort((a, b) => b.level - a.level);
+};
 
 export const projects: Project[] = [
   {
@@ -85,35 +143,20 @@ export const projects: Project[] = [
   }
 ]
 
-export const experiences = [
-  {
-    id: 1,
-    company: 'Tech Startup Inc.',
-    position: 'Senior Fullstack Developer',
-    duration: '2022 - Present',
-    location: 'San Francisco, CA',
+// Extract experiences from resume data
+const extractExperiencesFromResume = () => {
+  return resumeData.experience?.map((exp, index) => ({
+    id: index + 1,
+    company: exp.company,
+    position: exp.role,
+    duration: exp.duration,
+    location: exp.location,
     type: 'full-time' as const,
-    description: [
-      'Led development of core platform features serving 100k+ users',
-      'Architected microservices infrastructure reducing response times by 40%',
-      'Mentored junior developers and established coding standards',
-      'Implemented CI/CD pipelines improving deployment frequency by 300%'
-    ],
-    technologies: ['React', 'Node.js', 'PostgreSQL', 'AWS', 'Docker', 'Kubernetes']
-  },
-  {
-    id: 2,
-    company: 'Digital Agency',
-    position: 'Frontend Developer',
-    duration: '2020 - 2022',
-    location: 'Remote',
-    type: 'full-time' as const,
-    description: [
-      'Built responsive web applications for Fortune 500 clients',
-      'Improved site performance resulting in 25% increase in conversions',
-      'Collaborated with design teams to implement pixel-perfect UIs',
-      'Integrated third-party APIs and payment systems'
-    ],
-    technologies: ['React', 'TypeScript', 'Sass', 'Webpack', 'Jest']
-  }
-]
+    description: exp.description.split('. ').filter(sentence => sentence.trim().length > 0),
+    technologies: exp.keywords || []
+  })) || [];
+};
+
+export const experiences = extractExperiencesFromResume();
+
+export const skills: Skill[] = extractSkillsFromResume();

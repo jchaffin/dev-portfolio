@@ -6,12 +6,12 @@ import ThemeToggle from './ThemeToggle'
 
 const Navigation = () => {
   return (
-    <nav className="fixed top-0 w-full backdrop-blur-md z-50 border-b bg-bg-primary">
+    <nav className="fixed top-0 w-full backdrop-blur-xl z-50 border-b border-theme-primary/30 bg-theme-primary/20 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <Terminal className="h-8 w-8" />
-            <span className="ml-2 text-xl font-bold bg-clip-text text-transparent [background-image:var(--color-gradient-primary)]">DevPortfolio</span>
+            <Terminal className="h-8 w-8 text-theme-primary" />
+            <span className="ml-2 text-xl font-bold text-theme-primary">DevPortfolio</span>
           </div>
           <div className="flex items-center space-x-4">
             <ThemeToggle />
@@ -21,7 +21,7 @@ const Navigation = () => {
                   <a
                     key={item}
                     href={`#${item.toLowerCase()}`}
-                    className="px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-clip-text hover:text-transparent hover:[background-image:var(--color-gradient-primary)]"
+                    className="px-3 py-2 rounded-md text-sm text-theme-primary font-medium transition-colors hover:text-theme-secondary"
                   >
                     {item}
                   </a>

@@ -24,7 +24,7 @@ const ContactSection = () => {
   ]
 
   return (
-    <section id="contact" className="py-20">
+    <section id="contact" className="py-20 bg-theme-secondary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -33,10 +33,10 @@ const ContactSection = () => {
           transition={{ duration: 0.8 }}
           className="text-center"
         >
-          <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent [background-image:var(--color-gradient-primary)]">
+          <h2 className="text-4xl font-bold mb-6 text-theme-primary">
             Let's Work Together
           </h2>
-          <p className="text-lg mb-8 text-[var(--color-text-secondary)]">
+          <p className="text-lg mb-8 text-theme-secondary">
             I'm always open to discussing new opportunities and interesting projects
           </p>
           <div className="flex justify-center space-x-6">
@@ -48,7 +48,7 @@ const ContactSection = () => {
                 rel="noopener noreferrer"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="p-4 rounded-full transition-all duration-300 "
+                className="p-4 rounded-full transition-all duration-300 text-theme-secondary hover:text-theme-primary hover:bg-theme-primary"
                 aria-label={item.label}
               >
                 {item.icon}

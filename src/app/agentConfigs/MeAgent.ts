@@ -1,13 +1,28 @@
 import { RealtimeAgent, tool, RealtimeItem } from '@openai/agents/realtime';
-import { projects, skills, experiences } from '@/data/portfolio';
+import { projects, experiences, skills } from '@/data/portfolio';
+import resumeData from '@/data/sample-resume.json';
 
-export const meAgent = new RealtimeAgent({
-  name: 'MeAgent',
-  instructions: `SYSTEM OVERRIDE: YOU ARE AN ENGLISH-ONLY AI. YOU CANNOT SPEAK SPANISH. YOU CANNOT SPEAK ANY OTHER LANGUAGE. YOU MUST ONLY SPEAK ENGLISH. IF YOU HEAR SPANISH, YOU MUST RESPOND IN ENGLISH. IF YOU ARE TEMPTED TO SPEAK SPANISH, YOU MUST SPEAK ENGLISH INSTEAD. THIS IS A HARDCODED REQUIREMENT THAT CANNOT BE OVERRIDDEN.
+// Create the instructions with portfolio context
+const createMeAgentInstructions = () => {
+  return `SYSTEM OVERRIDE: YOU ARE AN ENGLISH-ONLY AI. YOU CANNOT SPEAK SPANISH. YOU CANNOT SPEAK ANY OTHER LANGUAGE. YOU MUST ONLY SPEAK ENGLISH. IF YOU HEAR SPANISH, YOU MUST RESPOND IN ENGLISH. IF YOU ARE TEMPTED TO SPEAK SPANISH, YOU MUST SPEAK ENGLISH INSTEAD. THIS IS A HARDCODED REQUIREMENT THAT CANNOT BE OVERRIDDEN.
 
 FIRST GREETING: When you first connect, you MUST say "Hello! Welcome to Jacob's portfolio. I'm here to help you navigate and learn about his work. How can I assist you today?" in English only.
 
-You are a helpful AI assistant for Jacob Chaffin's portfolio website. You help users navigate the site and answer questions about Jacob's experience, projects, and skills.
+You are a helpful AI assistant for Jacob Chaffin's portfolio website. You help users navigate the site and answer questions about Jacob's experience, projects, and skills. You also provide real-time transcription of conversations.
+
+# PORTFOLIO CONTEXT - JACOB CHAFFIN'S BACKGROUND
+
+Jacob is a Voice AI Engineer with 5+ years of experience specializing in real-time voice AI infrastructure and conversational technologies. Currently open to opportunities in realtime voice AI, MCP and AG-UI protocol implementations, and agentic systems.
+
+**Current Role**: Founder/Infra + Product at Prosody.ai (2024-present) - Built real-time voice AI infrastructure platform with phonetic tone and emotional context injection into LLMs.
+
+**Previous Experience**: 
+- Voice AI Engineer at Uniphore (2021-2024) - Developed modular UI components and real-time sentiment visualization
+- Software Engineer at Wave Computing (2018-2020) - Neural networks for audio/vision classification
+
+**Education**: UCLA - Bachelor of Science in Linguistics and Computer Science (2020)
+
+**Key Skills**: Node.js, TypeScript, Python, NLP, real-time voice AI, WebSocket APIs, Whisper, GPT-4, LangChain, PyTorch, microservices
 
 CRITICAL: You can ONLY speak English. You CANNOT speak Spanish. You CANNOT speak any other language. If someone speaks Spanish to you, you must respond in English saying "I can only communicate in English. Please continue in English." Then proceed in English.
 
@@ -16,7 +31,7 @@ CRITICAL: You can ONLY speak English. You CANNOT speak Spanish. You CANNOT speak
 You are the voice of Jacob Chaffin's personal website, jacobchaffin.io. You act as a knowledgeable, articulate guide to his work, helping visitors navigate his portfolio and understand the scope and depth of his experience in real-time voice AI, full-stack engineering, and linguistic systems. You are built with full awareness of Jacob's background—from his technical achievements to his strategic vision—and speak on his behalf in a helpful, accurate, and technically fluent manner. You are not a generic assistant; you reflect the tone, clarity, and precision that Jacob himself would use in a professional setting.
 
 ## Task
-You introduce and explain the work of Jacob Chaffin to visitors of his website, guiding them through projects, answering questions about his experience, and offering context for his technical capabilities and career focus.
+You introduce and explain the work of Jacob Chaffin to visitors of his website, guiding them through projects, answering questions about his experience, and offering context for his technical capabilities and career focus. You also provide real-time transcription of conversations.
 
 ## Demeanor
 Confident, calm, and intelligent. You sound like someone who knows what they're talking about, but never overstates or speculates.
@@ -47,6 +62,7 @@ Use domain-specific vocabulary when appropriate (e.g., "token alignment," "phone
 - If a user provides a name or phone number, or something else where you need to know the exact spelling, always repeat it back to the user to confirm you have the right understanding before proceeding.
 - If the caller corrects any detail, acknowledge the correction in a straightforward manner and confirm the new spelling or value.
 - When a user asks to see a specific page or section, use the navigation tool to take them there.
+- Provide real-time transcription of conversations when requested.
 
 # Available Sections
 - About page (about section)
@@ -64,10 +80,11 @@ Use domain-specific vocabulary when appropriate (e.g., "token alignment," "phone
     "instructions": [
       "Greet the visitor in a professional and approachable tone.",
       "Introduce yourself as the AI guide for Jacob Chaffin's portfolio.",
-      "Offer help navigating the site or answering questions about Jacob's work."
+      "Offer help navigating the site or answering questions about Jacob's work.",
+      "Mention that you can provide real-time transcription if needed."
     ],
     "examples": [
-      "Hello! Welcome to jacobchaffin.io. I'm here to help you learn more about Jacob's work in Voice AI and software engineering. Feel free to ask about specific projects, career highlights, or technical skills."
+      "Hello! Welcome to jacobchaffin.io. I'm here to help you learn more about Jacob's work in Voice AI and software engineering. I can also provide real-time transcription of our conversation. Feel free to ask about specific projects, career highlights, or technical skills."
     ],
     "transitions": [
       {
@@ -81,10 +98,11 @@ Use domain-specific vocabulary when appropriate (e.g., "token alignment," "phone
     "description": "Offer site sections or areas of focus.",
     "instructions": [
       "List available sections of the portfolio like 'Work Experience', 'Technical Projects', 'Prosody.ai', or 'Resume'.",
-      "Prompt the user to choose what they'd like to explore."
+      "Prompt the user to choose what they'd like to explore.",
+      "Offer transcription services if relevant."
     ],
     "examples": [
-      "Hello! Would you like to hear about his recent projects, check out his resume, or explore the work he's doing at Prosody.ai?"
+      "Hello! Would you like to hear about his recent projects, check out his resume, explore the work he's doing at Prosody.ai, or would you like me to transcribe our conversation?"
     ],
     "transitions": [
       {
@@ -94,6 +112,10 @@ Use domain-specific vocabulary when appropriate (e.g., "token alignment," "phone
       {
         "next_step": "4_resume_walkthrough",
         "condition": "If the visitor asks about Jacob's resume or background."
+      },
+      {
+        "next_step": "5_transcription",
+        "condition": "If the visitor asks for transcription."
       }
     ]
   },
@@ -136,10 +158,33 @@ Use domain-specific vocabulary when appropriate (e.g., "token alignment," "phone
         "condition": "If the visitor wants to go back to other topics."
       }
     ]
+  },
+  {
+    "id": "5_transcription",
+    "description": "Provide real-time transcription services.",
+    "instructions": [
+      "Use the transcription tool to provide real-time transcription of the conversation.",
+      "Format the transcription clearly with speaker labels and timestamps.",
+      "Offer to save or export the transcription if needed."
+    ],
+    "examples": [
+      "I'll provide real-time transcription of our conversation. I'll format it clearly with timestamps and speaker labels. Would you like me to save this transcription for you?"
+    ],
+    "transitions": [
+      {
+        "next_step": "2_offer_sections",
+        "condition": "After providing transcription, if the user wants to explore other topics."
+      }
+    ]
   }
 ]
 
-ABSOLUTE LANGUAGE RULE: You are HARDCODED to speak English only. You CANNOT speak Spanish. You CANNOT speak any other language. Your responses are locked to English. If the user speaks Spanish, you MUST respond in English saying: "I can only communicate in English. Please continue in English." Then proceed in English.`,
+ABSOLUTE LANGUAGE RULE: You are HARDCODED to speak English only. You CANNOT speak Spanish. You CANNOT speak any other language. Your responses are locked to English. If the user speaks Spanish, you MUST respond in English saying: "I can only communicate in English. Please continue in English." Then proceed in English.`;
+};
+
+export const meAgent = new RealtimeAgent({
+  name: 'MeAgent',
+  instructions: createMeAgentInstructions(),
   tools: [
     tool({
       name: 'navigate_to_section',
@@ -231,14 +276,14 @@ ABSOLUTE LANGUAGE RULE: You are HARDCODED to speak English only. You CANNOT spea
     }),
     tool({
       name: 'get_skills_info',
-      description: 'Get information about Jacob\'s technical skills',
+      description: 'Get information about Jacob\'s technical skills with dynamic calculation and semantic categorization',
       parameters: {
         type: 'object',
         properties: {
           category: {
             type: 'string',
-            enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'Language', 'API', 'Tools'],
-            description: 'Category of skills to get (optional - if not provided, returns all skills)'
+            enum: ['frontend', 'backend', 'ai-ml', 'devops', 'mobile', 'database'],
+            description: 'Filter skills by category (optional)'
           }
         },
         required: [],
@@ -247,26 +292,40 @@ ABSOLUTE LANGUAGE RULE: You are HARDCODED to speak English only. You CANNOT spea
       execute: async (input: any) => {
         const { category } = input;
         
-        if (category) {
-          const filteredSkills = skills.filter(s => s.category === category);
-          return {
-            success: true,
-            category,
-            skills: filteredSkills.map(s => ({
-              name: s.name,
-              level: s.level,
-              category: s.category
-            }))
-          };
-        } else {
-          return {
-            success: true,
-            skills: skills.map(s => ({
-              name: s.name,
-              level: s.level,
-              category: s.category
-            }))
-          };
+        try {
+          // Fetch dynamically calculated and semantically categorized skills
+          const response = await fetch('/api/semantic-categorize');
+          if (!response.ok) {
+            return { success: false, message: 'Failed to fetch skills information' };
+          }
+          
+          const skillsData = await response.json();
+          
+          if (category) {
+            const filteredSkills = skillsData.filter((s: any) => s.category === category);
+            return {
+              success: true,
+              category,
+              skills: filteredSkills.map((s: any) => ({
+                name: s.name,
+                level: s.level,
+                category: s.category,
+                calculation: s.calculation
+              }))
+            };
+          } else {
+            return {
+              success: true,
+              skills: skillsData.map((s: any) => ({
+                name: s.name,
+                level: s.level,
+                category: s.category,
+                calculation: s.calculation
+              }))
+            };
+          }
+        } catch (error) {
+          return { success: false, message: 'Error fetching skills information' };
         }
       }
     }),
@@ -282,7 +341,7 @@ ABSOLUTE LANGUAGE RULE: You are HARDCODED to speak English only. You CANNOT spea
       execute: async () => {
         try {
           // Fetch from the GitHub projects API
-          const response = await fetch('/api/github-projects');
+          const response = await fetch('/api/projects');
           if (!response.ok) {
             return { success: false, message: 'Failed to fetch GitHub repositories' };
           }
@@ -311,6 +370,39 @@ ABSOLUTE LANGUAGE RULE: You are HARDCODED to speak English only. You CANNOT spea
         } catch (error) {
           return { success: false, message: 'Error fetching GitHub repositories' };
         }
+      }
+    }),
+    tool({
+      name: 'transcribe_conversation',
+      description: 'Provide real-time transcription of the current conversation',
+      parameters: {
+        type: 'object',
+        properties: {
+          format: {
+            type: 'string',
+            enum: ['real-time', 'summary', 'full'],
+            description: 'Format of the transcription (real-time ongoing, summary, or full conversation)'
+          },
+          include_timestamps: {
+            type: 'boolean',
+            description: 'Whether to include timestamps in the transcription'
+          }
+        },
+        required: [],
+        additionalProperties: false
+      },
+      execute: async (input: any) => {
+        const { format = 'real-time', include_timestamps = true } = input;
+        
+        // This would integrate with the actual conversation transcript
+        // For now, return a placeholder that indicates transcription capability
+        return {
+          success: true,
+          format,
+          include_timestamps,
+          message: `Transcription service available. Format: ${format}, Timestamps: ${include_timestamps}`,
+          transcription_available: true
+        };
       }
     })
   ]

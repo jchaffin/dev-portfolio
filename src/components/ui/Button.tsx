@@ -9,6 +9,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   animate?: boolean
+  asChild?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -20,6 +21,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     leftIcon,
     rightIcon,
     animate = true,
+    asChild = false,
     children,
     disabled,
     ...props
@@ -28,7 +30,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     
     const variants = {
       primary: 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg focus:ring-blue-500',
-      secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 focus:ring-gray-500',
+      secondary: 'bg-gray-100 text-gray-900 hover:bg-blue-600 dark:hover:bg-blue-600 focus:ring-gray-500',
       outline: 'border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white focus:ring-blue-500',
       ghost: 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 focus:ring-gray-500'
     }
@@ -78,6 +80,20 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {rightIcon && !isLoading && <span className="ml-2">{rightIcon}</span>}
       </button>
     )
+
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children, {
+        className: cn(
+          baseClasses,
+          variants[variant],
+          sizes[size],
+          className,
+          children.props.className
+        ),
+        disabled: disabled || isLoading,
+        ...props
+      } as any)
+    }
 
     if (animate) {
       return (

@@ -27,11 +27,8 @@ export async function GET() {
         }),
       }
     ); 
-    
-    console.log('OpenAI response status:', response.status);
+
     const data = await response.json();
-    console.log('OpenAI response data:', data);
-    console.log('🎯 SESSION CREATED - Ready to hand off to MeAgent');
     
     // Check if the response has the expected structure
     if (!data.client_secret?.value) {
