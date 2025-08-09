@@ -14,7 +14,7 @@ const AboutSection = () => {
     {
       icon: <Server className="h-8 w-8" />,
       title: "Backend Development",
-      description: "Node.js, Express, PostgreSQL, APIs"
+      description: "Node.js, MongoDB, Pinecone DB"
     },
     {
       icon: <Database className="h-8 w-8" />,
@@ -24,17 +24,17 @@ const AboutSection = () => {
     {
       icon: <AudioLines className="h-8 w-8" />,
       title: "Voice AI",
-      description: "OpenAI realtime, ASR, emotion detection, and more"
+      description: "STS, SAMBA-ASR, Tone Injection"
     },
     {
       icon: <ChartBar className="h-8 w-8" />,
       title: "Data Analysis",
-      description: "Python, Pandas, NumPy, Matplotlib"
+      description: "Jupyter Notebook, Praat, Numpy"
     },
     {
       icon: <Banknote className="h-8 w-8" />,
       title: "Finance",
-      description: "Financial Modeling, Portfolio Management, Risk Analysis"
+      description: "Fianancial Modeling, Portfolio Management, Risk Analysis"
     }
   ]
 

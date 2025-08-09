@@ -1,13 +1,13 @@
 export function audioFormatForCodec(codec: string) {
   switch (codec.toLowerCase()) {
     case 'opus':
-      return { sampleRate: 48000, channels: 1 };
+      return 'pcm16';
     case 'pcm':
-      return { sampleRate: 16000, channels: 1 };
+      return 'pcm16';
     case 'g711':
-      return { sampleRate: 8000, channels: 1 };
+      return 'g711_ulaw';
     default:
-      return { sampleRate: 48000, channels: 1 };
+      return 'pcm16';
   }
 }
 

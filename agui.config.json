@@ -1,0 +1,442 @@
+{
+  "agui_version": "0.1",
+  "agent": {
+    "name": "JacobChaffinWebsiteAgent",
+    "entry_state": "intro",
+    "prompt_file": "jacob_chaffin_voice_agent_prompt_with_context.txt",
+    "goals": [
+      "Showcase expertise in real-time voice AI, full-stack, linguistics",
+      "Attract Series A\u2013C roles, infra/voice AI work, and consulting",
+      "Drive demos, resume downloads, and booked intro calls"
+    ]
+  },
+  "transport": {
+    "ws_url": "/api/voice/ws?upgrade=websocket",
+    "http_fallback": {
+      "in": "/agui/events",
+      "sse": "/agui/stream"
+    }
+  },
+  "intents": [
+    "NAVIGATE",
+    "EXPLAIN",
+    "DEMO",
+    "DOWNLOAD_RESUME",
+    "SCHEDULE_MEETING",
+    "SAVE_CONTACT",
+    "COMPARE",
+    "HANDOFF"
+  ],
+  "nlu_rules": [
+    {
+      "if": "text ~ /resume/i",
+      "intent": "DOWNLOAD_RESUME"
+    },
+    {
+      "if": "text ~ /(open|go to|show).*(prosody|projects|resume|contact)/i",
+      "intent": "NAVIGATE",
+      "slots": {
+        "section": "$2"
+      }
+    },
+    {
+      "if": "text ~ /(demo|play)/i && text ~ /re(al[- ]?time)/i",
+      "intent": "DEMO",
+      "slots": {
+        "demo_id": "realtime_pipeline"
+      }
+    },
+    {
+      "if": "text ~ /(latency|websocket|token alignment|phonetic|orchestrat|prosody)/i",
+      "intent": "EXPLAIN"
+    },
+    {
+      "if": "text ~ /(book|schedule).*(call|meeting)/i",
+      "intent": "SCHEDULE_MEETING"
+    },
+    {
+      "if": "text ~ /(email|phone|contact|reach)/i && text has email_or_phone",
+      "intent": "SAVE_CONTACT"
+    },
+    {
+      "if": "else",
+      "intent": "HANDOFF"
+    }
+  ],
+  "slots_schema": {
+    "section": [
+      "prosody",
+      "projects",
+      "resume",
+      "contact"
+    ],
+    "topic": [
+      "prosody",
+      "latency",
+      "websocket_inference",
+      "token_alignment",
+      "phonetic_embeddings",
+      "orchestration",
+      "career"
+    ],
+    "demo_id": [
+      "realtime_pipeline",
+      "sentiment_overlay",
+      "sarcasm_classifier"
+    ],
+    "name": "string",
+    "email": "string",
+    "phone": "string",
+    "note": "string",
+    "datetime_iso": "string",
+    "opponent": "string"
+  },
+  "tools_manifest": [
+    {
+      "name": "open_section",
+      "schema": {
+        "section_id": {
+          "enum": [
+            "prosody",
+            "projects",
+            "resume",
+            "contact"
+          ]
+        }
+      }
+    },
+    {
+      "name": "play_demo",
+      "schema": {
+        "demo_id": {
+          "enum": [
+            "realtime_pipeline",
+            "sentiment_overlay",
+            "sarcasm_classifier"
+          ]
+        }
+      }
+    },
+    {
+      "name": "download_resume",
+      "schema": {}
+    },
+    {
+      "name": "schedule_Meeting",
+      "schema": {
+        "event_type_uri": {
+          "type": "string"
+        },
+        "datetime_iso": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "name": "save_contact",
+      "schema": {
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "name": "send_followup",
+      "schema": {
+        "email": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        }
+      }
+    }
+  ],
+  "states": [
+    {
+      "id": "intro",
+      "on_enter": [
+        {
+          "type": "tts.say",
+          "text": "Welcome to jacobchaffin.io. I can navigate projects, Prosody.ai, resume, or contact."
+        }
+      ],
+      "transitions": [
+        {
+          "cond": "intent==NAVIGATE",
+          "target": "navigate"
+        },
+        {
+          "cond": "intent==EXPLAIN",
+          "target": "explain"
+        },
+        {
+          "cond": "intent==DEMO",
+          "target": "demo"
+        },
+        {
+          "cond": "intent==DOWNLOAD_RESUME",
+          "target": "download_resume"
+        },
+        {
+          "cond": "intent==SCHEDULE_MEETING",
+          "target": "schedule_collect"
+        },
+        {
+          "cond": "intent==SAVE_CONTACT",
+          "target": "contact_collect"
+        },
+        {
+          "cond": "else",
+          "target": "clarify"
+        }
+      ]
+    },
+    {
+      "id": "navigate",
+      "actions": [
+        {
+          "type": "ui.action",
+          "name": "open_section",
+          "args": {
+            "section_id": "{{section}}"
+          }
+        },
+        {
+          "type": "tts.say",
+          "text": "Opened. Want a quick summary or a 20 second demo?"
+        }
+      ],
+      "transitions": [
+        {
+          "target": "next_offer"
+        }
+      ]
+    },
+    {
+      "id": "explain",
+      "actions": [
+        {
+          "type": "tts.say",
+          "text": "{{explain(topic)}}"
+        }
+      ],
+      "transitions": [
+        {
+          "target": "next_offer"
+        }
+      ]
+    },
+    {
+      "id": "demo",
+      "actions": [
+        {
+          "type": "ui.action",
+          "name": "play_demo",
+          "args": {
+            "demo_id": "{{demo_id}}"
+          }
+        },
+        {
+          "type": "tts.say",
+          "text": "Playing now."
+        }
+      ],
+      "transitions": [
+        {
+          "target": "next_offer"
+        }
+      ]
+    },
+    {
+      "id": "download_resume",
+      "actions": [
+        {
+          "type": "ui.action",
+          "name": "download_resume"
+        },
+        {
+          "type": "tts.say",
+          "text": "Resume is ready to download."
+        }
+      ],
+      "transitions": [
+        {
+          "target": "next_offer"
+        }
+      ]
+    },
+    {
+      "id": "schedule_collect",
+      "actions": [
+        {
+          "type": "confirm.request",
+          "prompt": "Confirming: {{name}}, {{email}}{{, {{phone}}}}. Time: {{datetime_iso}}. Proceed?"
+        }
+      ],
+      "transitions": [
+        {
+          "cond": "confirm.accepted",
+          "target": "schedule_commit"
+        },
+        {
+          "cond": "else",
+          "target": "schedule_collect"
+        }
+      ]
+    },
+    {
+      "id": "schedule_commit",
+      "actions": [
+        {
+          "type": "tool.call",
+          "name": "schedule_Meeting",
+          "args": {
+            "event_type_uri": "{{event_type_uri}}",
+            "datetime_iso": "{{datetime_iso}}",
+            "name": "{{name}}",
+            "email": "{{email}}",
+            "phone": "{{phone}}",
+            "note": "{{note}}"
+          }
+        },
+        {
+          "type": "ui.action",
+          "name": "open_url",
+          "args": {
+            "url": "{{tool.result.bookingUrl}}"
+          }
+        },
+        {
+          "type": "tts.say",
+          "text": "Opening your booking link. I\u2019ll send a confirmation after Calendly completes."
+        }
+      ],
+      "transitions": [
+        {
+          "target": "next_offer"
+        }
+      ]
+    },
+    {
+      "id": "contact_collect",
+      "actions": [
+        {
+          "type": "confirm.request",
+          "prompt": "Confirming: {{name}}, {{email}}{{, {{phone}}}}. Save?"
+        }
+      ],
+      "transitions": [
+        {
+          "cond": "confirm.accepted",
+          "target": "contact_commit"
+        },
+        {
+          "cond": "else",
+          "target": "contact_collect"
+        }
+      ]
+    },
+    {
+      "id": "contact_commit",
+      "actions": [
+        {
+          "type": "tool.call",
+          "name": "save_contact",
+          "args": {
+            "name": "{{name}}",
+            "email": "{{email}}",
+            "phone": "{{phone}}",
+            "note": "{{note}}"
+          }
+        },
+        {
+          "type": "tool.call",
+          "name": "send_followup",
+          "args": {
+            "email": "{{email}}",
+            "topic": "Follow up"
+          }
+        },
+        {
+          "type": "tts.say",
+          "text": "Saved. I\u2019ll follow up shortly."
+        }
+      ],
+      "transitions": [
+        {
+          "target": "next_offer"
+        }
+      ]
+    },
+    {
+      "id": "clarify",
+      "actions": [
+        {
+          "type": "tts.say",
+          "text": "I can navigate, explain projects, play a demo, share the resume, or book a call. Which do you want?"
+        }
+      ],
+      "transitions": [
+        {
+          "target": "intro"
+        }
+      ]
+    },
+    {
+      "id": "next_offer",
+      "actions": [
+        {
+          "type": "tts.say",
+          "text": "Anything else? Projects, Prosody.ai, resume, or contact?"
+        }
+      ],
+      "transitions": [
+        {
+          "target": "intro"
+        }
+      ]
+    }
+  ],
+  "explain_snippets": {
+    "latency": "Pipeline targets under 150 ms for ASR partials and under 400 ms to first token. Techniques include VAD, chunked decoding, streaming logits, and early exits.",
+    "websocket_inference": "Bidirectional WebSocket streams transcripts and partial model outputs. Backpressure is handled with credit based flow control.",
+    "token_alignment": "ASR timestamps align with generated tokens to keep prosodic cues consistent during TTS and downstream analysis.",
+    "phonetic_embeddings": "A causal model projects MFCC and prosodic features into low dimensional embeddings for tone and intent.",
+    "orchestration": "A LangGraph-style graph handles tool routing, guardrails, retries, and context pinning around the user goal.",
+    "prosody": "Prosody.ai analyzes tone and intent from live speech with streaming ASR, LLM orchestration, and custom PyTorch classifiers."
+  },
+  "policy": {
+    "pii_confirmation_required": [
+      "name",
+      "email",
+      "phone",
+      "datetime_iso"
+    ],
+    "barge": true
+  },
+  "webhooks": {
+    "calendly_invitee_created": "/api/calendly/webhook"
+  }
+}

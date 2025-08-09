@@ -44,28 +44,36 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   const historyHandlers = useHandleSessionHistory().current;
 
   function handleTransportEvent(event: any) {
-    console.log("Transport event received:", event.type, event);
+    console.log("🚀 Transport event received:", event.type, event);
     
     // Handle additional server events that aren't managed by the session
     switch (event.type) {
       case "conversation.item.input_audio_transcription.completed": {
-        console.log("Transcription completed:", event);
+        console.log("🎤 Transcription completed:", event);
         historyHandlers.handleTranscriptionCompleted(event);
         break;
       }
       case "response.audio_transcript.done": {
-        console.log("Response transcript done:", event);
+        console.log("🎵 Response transcript done:", event);
         historyHandlers.handleTranscriptionCompleted(event);
         break;
       }
       case "response.audio_transcript.delta": {
-        console.log("Response transcript delta:", event);
+        console.log("🎵 Response transcript delta:", event);
         historyHandlers.handleTranscriptionDelta(event);
         break;
       }
       case "conversation.item.input_audio_transcription.delta": {
-        console.log("Input transcription delta:", event);
+        console.log("🎤 Input transcription delta:", event);
         historyHandlers.handleTranscriptionDelta(event);
+        break;
+      }
+      case "response.audio": {
+        console.log("🎵 Audio response received:", event);
+        break;
+      }
+      case "response.audio.done": {
+        console.log("🎵 Audio response completed:", event);
         break;
       }
       default: {
@@ -99,6 +107,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     if (sessionRef.current) {
       // Log server errors
       sessionRef.current.on("error", (...args: any[]) => {
+        console.error("❌ Session error:", args[0]);
         logServerEvent({
           type: "error",
           message: args[0],
@@ -136,7 +145,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       // This lets you use the codec selector in the UI to force narrow-band (8 kHz) codecs to
       //  simulate how the voice agent sounds over a PSTN/SIP phone call.
       const codecParam = codecParamRef.current;
-      const audioFormat = audioFormatForCodec(codecParam) as any; // Type assertion for compatibility
+      const audioFormat = audioFormatForCodec(codecParam);
 
       sessionRef.current = new RealtimeSession(rootAgent, {
         transport: new OpenAIRealtimeWebRTC({
@@ -155,13 +164,14 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
             model: 'gpt-4o-transcribe',
             language: 'en',
           },
-          instructions: 'CRITICAL: You are an English-only AI assistant. You MUST ONLY speak English. You CANNOT and WILL NOT speak Spanish, French, or any other language. You are FORBIDDEN from speaking any language other than English. If the user speaks in another language, respond in English only. NEVER use Spanish words or phrases.',
         },
         outputGuardrails: outputGuardrails ?? [],
         context: extraContext ?? {},
       });
 
+      console.log("🔗 Connecting session with API key...");
       await sessionRef.current.connect({ apiKey: ek });
+      console.log("✅ Session connected successfully");
       updateStatus('CONNECTED');
     },
     [callbacks, updateStatus],
@@ -185,6 +195,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   const assertconnected = () => {
     if (!sessionRef.current) throw new Error('RealtimeSession not connected');
   };
+  
 
   /* ----------------------- message helpers ------------------------- */
 
@@ -215,6 +226,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     sessionRef.current.transport.sendEvent({ type: 'input_audio_buffer.commit' } as any);
     sessionRef.current.transport.sendEvent({ type: 'response.create' } as any);
   }, []);
+  
 
   return {
     status,

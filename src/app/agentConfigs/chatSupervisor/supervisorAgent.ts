@@ -157,7 +157,7 @@ async function fetchResponsesMessage(body: any) {
     // Preserve the previous behaviour of forcing sequential tool calls.
   });
 
-  if (!response.ok) {
+  if (!response.ok) { 
     console.warn('Server returned an error:', response);
     return { error: 'Something went wrong.' };
   }

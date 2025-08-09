@@ -1,5 +1,5 @@
 import { InterviewConfig } from './types';
-import sampleResume from '../chatSupervisor/sample-resume.json';
+import sampleResume from '@/data/sample-resume.json';
 
 export const interviewConfig: InterviewConfig = {
   candidate: sampleResume,

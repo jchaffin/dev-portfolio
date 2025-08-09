@@ -74,7 +74,9 @@ const VoiceAIContent = () => {
     const el = document.createElement('audio');
     el.autoplay = true;
     el.style.display = 'none';
+    el.volume = 1.0; // Ensure volume is set
     document.body.appendChild(el);
+    console.log("🎵 Audio element created:", el);
     return el;
   }, []);
 
@@ -91,6 +93,24 @@ const VoiceAIContent = () => {
   useEffect(() => {
     if (sdkAudioElement && !audioElementRef.current) {
       audioElementRef.current = sdkAudioElement;
+      console.log("🎵 Audio element attached to ref:", sdkAudioElement);
+      
+      // Add event listeners to debug audio
+      sdkAudioElement.addEventListener('loadedmetadata', () => {
+        console.log("🎵 Audio metadata loaded");
+      });
+      
+      sdkAudioElement.addEventListener('play', () => {
+        console.log("🎵 Audio started playing");
+      });
+      
+      sdkAudioElement.addEventListener('pause', () => {
+        console.log("🎵 Audio paused");
+      });
+      
+      sdkAudioElement.addEventListener('error', (e) => {
+        console.error("🎵 Audio error:", e);
+      });
     }
   }, [sdkAudioElement]);
 
@@ -129,7 +149,10 @@ const VoiceAIContent = () => {
     interrupt,
     mute,
   } = useRealtimeSession({
-    onConnectionChange: (s) => setSessionStatus(s as SessionStatus),
+    onConnectionChange: (s) => {
+      console.log("🔄 Session status changed:", s);
+      setSessionStatus(s as SessionStatus);
+    },
   });
 
   const [isSuggestionsPaneExpanded, setIsSuggestionsPaneExpanded] =
@@ -199,6 +222,8 @@ const VoiceAIContent = () => {
 
       console.log("🤖 CONNECTING - Agent config set:", agentConfigSet);
       console.log("🤖 AGENT NAMES:", agentConfigSet?.map(agent => agent.name));
+      console.log("🎵 Audio element for connection:", sdkAudioElement);
+      
       await connect({
         getEphemeralKey: async () => EPHEMERAL_KEY,
         initialAgents: agentConfigSet,
@@ -207,19 +232,13 @@ const VoiceAIContent = () => {
         extraContext: {
           addTranscriptBreadcrumb,
           portfolioContext,
-          systemMessage: `You are an English-speaking AI assistant for Jacob Chaffin's portfolio. You have access to his complete portfolio data including work experience, technical skills, and projects. 
-
-PORTFOLIO CONTEXT:
-${JSON.stringify(portfolioContext, null, 2)}
-
-You can answer detailed questions about Jacob's professional background, specific projects, technologies he's worked with, and career achievements. Always respond in English only.`,
         },
       });
-      console.log("✅ MEAGENT CONNECTION SUCCESSFUL - Handoff complete");
+      console.log("✅ CONNECTION SUCCESSFUL - Agent connected");
       
       // Trigger initial greeting after connection is established
       setTimeout(() => {
-        console.log("Triggering initial greeting");
+        console.log("🎤 Triggering initial greeting");
         sendClientEvent({ type: "response.create" });
       }, 1000);
       
@@ -229,24 +248,47 @@ You can answer detailed questions about Jacob's professional background, specifi
     }
   };
 
-  const disconnectFromRealtime = () => {
-    console.log("🛑 DISCONNECTING - Stopping microphone and cleaning up");
+  const disconnectFromRealtime = async () => {
+    console.log("🔌 Starting disconnect process...");
     
-    // Stop the active microphone stream
+    // First, stop the active microphone stream
     if (microphoneStream) {
-      microphoneStream.getTracks().forEach(track => {
-        console.log("Stopping microphone track:", track.kind);
-        track.stop();
-      });
-      setMicrophoneStream(null);
+      console.log("🎤 Stopping microphone stream...");
+      try {
+        // Stop all tracks and disable them
+        microphoneStream.getTracks().forEach(track => {
+          console.log("Stopping microphone track:", track.kind, track.id);
+          track.stop();
+          track.enabled = false;
+        });
+        
+        // Clear the stream reference
+        setMicrophoneStream(null);
+        console.log("✅ Microphone stream stopped successfully");
+      } catch (error) {
+        console.error("Error stopping microphone stream:", error);
+      }
     }
     
-    // Disconnect from the SDK
-    disconnect();
-    setSessionStatus("DISCONNECTED");
-    clearTranscript();
+    // Stop any recording that might be active
+    try {
+      stopRecording();
+      console.log("✅ Recording stopped");
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+    }
     
-    console.log("✅ DISCONNECTED - Microphone stopped and session cleaned up");
+    // Disconnect from the realtime session
+    try {
+      await disconnect();
+      console.log("✅ Realtime session disconnected");
+    } catch (error) {
+      console.error('Error disconnecting from realtime session:', error);
+    } finally {
+      setSessionStatus("DISCONNECTED");
+      clearTranscript();
+      console.log("🧹 Disconnect process completed");
+    }
   };
 
   const sendSimulatedUserMessage = (text: string) => {
@@ -284,11 +326,11 @@ You can answer detailed questions about Jacob's professional background, specifi
   };
 
 
-
   const handleSendTextMessage = () => {
     if (!userText.trim() || sessionStatus !== "CONNECTED") return;
     
-    // For now, just clear the text since we don't have sendUserText
+    // Send the text message using the SDK
+    sendUserText(userText.trim());
     setUserText('');
   };
 
@@ -299,7 +341,7 @@ You can answer detailed questions about Jacob's professional background, specifi
     
     if (sessionStatus === "CONNECTED") {
       console.log("Disconnecting...");
-      disconnectFromRealtime();
+      await disconnectFromRealtime();
     } else {
       console.log("Starting connection...");
       
@@ -308,6 +350,13 @@ You can answer detailed questions about Jacob's professional background, specifi
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log("Microphone permission granted");
         setMicrophoneStream(stream); // Store the stream for later cleanup
+        
+        // Ensure audio element is ready for autoplay
+        if (sdkAudioElement) {
+          sdkAudioElement.muted = false;
+          sdkAudioElement.volume = 1.0;
+          console.log("🎵 Audio element prepared for autoplay");
+        }
         
         connectToRealtime();
       } catch (error) {
@@ -352,15 +401,19 @@ You can answer detailed questions about Jacob's professional background, specifi
 
   useEffect(() => {
     if (audioElementRef.current) {
+      console.log("🔊 Audio playback setting:", isAudioPlaybackEnabled);
       if (isAudioPlaybackEnabled) {
         audioElementRef.current.muted = false;
+        audioElementRef.current.volume = 1.0;
         audioElementRef.current.play().catch((err) => {
           console.warn("Autoplay may be blocked by browser:", err);
         });
+        console.log("🔊 Audio unmuted and playing");
       } else {
         // Mute and pause to avoid brief audio blips before pause takes effect.
         audioElementRef.current.muted = true;
         audioElementRef.current.pause();
+        console.log("🔇 Audio muted and paused");
       }
     }
 
@@ -390,15 +443,21 @@ You can answer detailed questions about Jacob's professional background, specifi
       startRecording(remoteStream);
     }
 
-    // Clean up on unmount or when sessionStatus is updated.
-    return () => {
+    // Only stop recording when session is disconnecting
+    if (sessionStatus === "DISCONNECTED") {
       stopRecording();
-    };
+    }
   }, [sessionStatus]);
 
-  // Cleanup microphone on component unmount
+  
+  // Cleanup on component unmount
   useEffect(() => {
     return () => {
+      console.log("🧹 Component unmounting, cleaning up...");
+      
+      // Stop recording
+      stopRecording();
+      
       if (microphoneStream) {
         console.log("🧹 CLEANUP - Stopping microphone on component unmount");
         microphoneStream.getTracks().forEach(track => {
@@ -406,8 +465,15 @@ You can answer detailed questions about Jacob's professional background, specifi
         });
         setMicrophoneStream(null);
       }
+      
+      if (sessionStatus === "CONNECTED") {
+        console.log("🧹 CLEANUP - Disconnecting session on component unmount");
+        disconnect().catch(error => {
+          console.error('Error during cleanup disconnect:', error);
+        });
+      }
     };
-  }, [microphoneStream]);
+  }, []); // Empty dependency array - only run on unmount
 
   return (
     <section id="voice-ai" className="py-20 bg-gradient-primary dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 relative overflow-hidden">
