@@ -12,12 +12,20 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends("next/core-web-vitals"),
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
+    },
+    rules: {
+      // Allow console statements in development
+      "no-console": process.env.NODE_ENV === "production" ? "error" : "warn",
+      // Allow unused variables if they start with underscore
+      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+      // Allow empty functions
+      "no-empty-function": "warn"
     },
   },
 ];

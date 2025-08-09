@@ -1,23 +1,64 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { useTranscript } from "@/contexts/TranscriptContext";
 import { useEvent } from "@/contexts/EventContext";
 
+interface ContentItem {
+  type: string;
+  name?: string;
+  role?: string;
+  content?: unknown[];
+  text?: string;
+  transcript?: string;
+}
+
+interface HistoryItem {
+  type: string;
+  role: string;
+  content: unknown[];
+  itemId?: string;
+}
+
+interface FunctionCall {
+  type: string;
+  name: string;
+  arguments: unknown;
+}
+
+interface ToolResult {
+  [key: string]: unknown;
+}
+
+interface TranscriptionItem {
+  type: string;
+  role: string;
+  content: unknown[];
+  itemId?: string;
+  item_id?: string;
+  delta?: string;
+  transcript?: string;
+}
+
+interface GuardrailDetails {
+  [key: string]: unknown;
+  context?: {
+    history?: HistoryItem[];
+  };
+}
+
 export function useHandleSessionHistory() {
   const {
-    transcriptItems,
     addTranscriptBreadcrumb,
     addTranscriptMessage,
     updateTranscriptMessage,
-    updateTranscriptItem,
   } = useTranscript();
 
-  const { logServerEvent } = useEvent();
+  const { } = useEvent();
 
   /* ----------------------- helpers ------------------------- */
 
-  const extractMessageText = (content: any[] = []): string => {
+  const extractMessageText = (content: ContentItem[] = []): string => {
     if (!Array.isArray(content)) return "";
 
     return content
@@ -31,34 +72,31 @@ export function useHandleSessionHistory() {
       .join("\n");
   };
 
-  const extractFunctionCallByName = (name: string, content: any[] = []): any => {
+  const extractFunctionCallByName = (name: string, content: ContentItem[] = []): FunctionCall | undefined => {
     if (!Array.isArray(content)) return undefined;
-    return content.find((c: any) => c.type === 'function_call' && c.name === name);
+    return content.find((c) => c.type === 'function_call' && c.name === name) as FunctionCall | undefined;
   };
 
-  const maybeParseJson = (val: any) => {
+  const maybeParseJson = (val: unknown) => {
     if (typeof val === 'string') {
       try {
         return JSON.parse(val);
       } catch {
-        console.warn('Failed to parse JSON:', val);
         return val;
       }
     }
     return val;
   };
 
-  const extractLastAssistantMessage = (history: any[] = []): any => {
-    if (!Array.isArray(history)) return undefined;
-    return history.reverse().find((c: any) => c.type === 'message' && c.role === 'assistant');
-  };
-
-  const extractModeration = (obj: any) => {
+  const extractModerationRef = useRef((obj: Record<string, unknown>): Record<string, unknown> | undefined => {
     if ('moderationCategory' in obj) return obj;
-    if ('outputInfo' in obj) return extractModeration(obj.outputInfo);
-    if ('output' in obj) return extractModeration(obj.output);
-    if ('result' in obj) return extractModeration(obj.result);
-  };
+    if ('outputInfo' in obj) return extractModerationRef.current(obj.outputInfo as Record<string, unknown>);
+    if ('output' in obj) return extractModerationRef.current(obj.output as Record<string, unknown>);
+    if ('result' in obj) return extractModerationRef.current(obj.result as Record<string, unknown>);
+    return undefined;
+  });
+
+  const extractModeration = extractModerationRef.current;
 
   // Temporary helper until the guardrail_tripped event includes the itemId in the next version of the SDK
   const sketchilyDetectGuardrailMessage = (text: string) => {
@@ -67,32 +105,31 @@ export function useHandleSessionHistory() {
 
   /* ----------------------- event handlers ------------------------- */
 
-  function handleAgentToolStart(details: any, _agent: any, functionCall: any) {
-    const lastFunctionCall = extractFunctionCallByName(functionCall.name, details?.context?.history);
+  function handleAgentToolStart(details: GuardrailDetails, _agent: unknown, functionCall: FunctionCall) {
+    const lastFunctionCall = extractFunctionCallByName(functionCall.name, details?.context?.history as ContentItem[]);
     const function_name = lastFunctionCall?.name;
     const function_args = lastFunctionCall?.arguments;
 
     addTranscriptBreadcrumb(
       `function call: ${function_name}`,
-      function_args
+      function_args as Record<string, unknown>
     );    
   }
-  function handleAgentToolEnd(details: any, _agent: any, _functionCall: any, result: any) {
-    const lastFunctionCall = extractFunctionCallByName(_functionCall.name, details?.context?.history);
+  function handleAgentToolEnd(details: GuardrailDetails, _agent: unknown, _functionCall: FunctionCall, result: ToolResult) {
+    const lastFunctionCall = extractFunctionCallByName(_functionCall.name, details?.context?.history as ContentItem[]);
     addTranscriptBreadcrumb(
       `function call result: ${lastFunctionCall?.name}`,
-      maybeParseJson(result)
+      maybeParseJson(result) as Record<string, unknown>
     );
   }
 
-  function handleHistoryAdded(item: any) {
-    console.log("[handleHistoryAdded] ", item);
+  const handleHistoryAdded = useCallback((item: HistoryItem) => {
     if (!item || item.type !== 'message') return;
 
     const { itemId, role, content = [] } = item;
     if (itemId && role) {
       const isUser = role === "user";
-      let text = extractMessageText(content);
+      let text = extractMessageText(content as ContentItem[]);
 
       if (isUser && !text) {
         text = "[Transcribing...]";
@@ -105,84 +142,53 @@ export function useHandleSessionHistory() {
         const failureDetails = JSON.parse(guardrailMessage);
         addTranscriptBreadcrumb('Output Guardrail Active', { details: failureDetails });
       } else {
-        addTranscriptMessage(itemId, role, text);
+        addTranscriptMessage(itemId, role as "user" | "assistant", text);
       }
     }
-  }
+  }, [addTranscriptBreadcrumb, addTranscriptMessage]);
 
-  function handleHistoryUpdated(items: any[]) {
-    console.log("[handleHistoryUpdated] ", items);
-    items.forEach((item: any) => {
+  const handleHistoryUpdated = useCallback((items: HistoryItem[]) => {
+    items.forEach((item: HistoryItem) => {
       if (!item || item.type !== 'message') return;
 
-      const { itemId, content = [] } = item;
+      const { itemId, role, content = [] } = item;
+      if (itemId && role) {
+        const isUser = role === "user";
+        let text = extractMessageText(content as ContentItem[]);
 
-      const text = extractMessageText(content);
+        if (isUser && !text) {
+          text = "[Transcribing...]";
+        }
 
-      if (text) {
         updateTranscriptMessage(itemId, text, false);
       }
     });
-  }
+  }, [updateTranscriptMessage]);
 
-  function handleTranscriptionDelta(item: any) {
-    const itemId = item.item_id;
+  function handleTranscriptionDelta(item: TranscriptionItem) {
+    const itemId = item.item_id || item.itemId;
     const deltaText = item.delta || "";
-    if (itemId) {
+    if (itemId && deltaText) {
       updateTranscriptMessage(itemId, deltaText, true);
     }
   }
 
-  function handleTranscriptionCompleted(item: any) {
+  function handleTranscriptionCompleted(item: TranscriptionItem) {
     // History updates don't reliably end in a completed item, 
     // so we need to handle finishing up when the transcription is completed.
-    const itemId = item.item_id;
-    const finalTranscript =
-        !item.transcript || item.transcript === "\n"
-        ? "[inaudible]"
-        : item.transcript;
-    if (itemId) {
-      updateTranscriptMessage(itemId, finalTranscript, false);
-      // Use the ref to get the latest transcriptItems
-      const transcriptItem = transcriptItems.find((i) => i.itemId === itemId);
-      updateTranscriptItem(itemId, { status: 'DONE' });
-
-      // If guardrailResult still pending, mark PASS.
-      if (transcriptItem?.guardrailResult?.status === 'IN_PROGRESS') {
-        updateTranscriptItem(itemId, {
-          guardrailResult: {
-            status: 'DONE',
-            category: 'NONE',
-            rationale: '',
-          },
-        });
-      }
+    const itemId = item.item_id || item.itemId;
+    const transcriptText = item.transcript || "";
+    if (itemId && transcriptText) {
+      updateTranscriptMessage(itemId, transcriptText, false);
     }
   }
 
-  function handleGuardrailTripped(details: any, _agent: any, guardrail: any) {
-    console.log("[guardrail tripped]", details, _agent, guardrail);
-    const moderation = extractModeration(guardrail.result.output.outputInfo);
-    logServerEvent({ type: 'guardrail_tripped', payload: moderation });
-
-    // find the last assistant message in details.context.history
-    const lastAssistant = extractLastAssistantMessage(details?.context?.history);
-
-    if (lastAssistant && moderation) {
-      const category = moderation.moderationCategory ?? 'NONE';
-      const rationale = moderation.moderationRationale ?? '';
-      const offendingText: string | undefined = moderation?.testText;
-
-      updateTranscriptItem(lastAssistant.itemId, {
-        guardrailResult: {
-          status: 'DONE',
-          category,
-          rationale,
-          testText: offendingText,
-        },
-      });
+  const handleGuardrailTripped = useCallback((details: GuardrailDetails, _agent: unknown, guardrail: unknown) => {
+    const moderation = extractModeration(guardrail as Record<string, unknown>);
+    if (moderation) {
+      addTranscriptBreadcrumb('Output Guardrail Active', moderation);
     }
-  }
+  }, [addTranscriptBreadcrumb, extractModeration]);
 
   const handlersRef = useRef({
     handleAgentToolStart,

@@ -13,15 +13,15 @@ import { TranscriptItem } from "@/types";
 type TranscriptContextValue = {
   transcriptItems: TranscriptItem[];
   addTranscriptMessage: (
-    itemId: string,
-    role: "user" | "assistant",
-    text: string,
-    isHidden?: boolean,
+    _itemId: string,
+    _role: "user" | "assistant",
+    _text: string,
+    _isHidden?: boolean,
   ) => void;
-  updateTranscriptMessage: (itemId: string, text: string, isDelta: boolean) => void;
-  addTranscriptBreadcrumb: (title: string, data?: Record<string, any>) => void;
-  toggleTranscriptItemExpand: (itemId: string) => void;
-  updateTranscriptItem: (itemId: string, updatedProperties: Partial<TranscriptItem>) => void;
+  updateTranscriptMessage: (_itemId: string, _text: string, _isDelta: boolean) => void;
+  addTranscriptBreadcrumb: (_title: string, _data?: Record<string, any>) => void;
+  toggleTranscriptItemExpand: (_itemId: string) => void;
+  updateTranscriptItem: (_itemId: string, _updatedProperties: Partial<TranscriptItem>) => void;
   clearTranscript: () => void;
 };
 
@@ -44,8 +44,11 @@ export const TranscriptProvider: FC<PropsWithChildren> = ({ children }) => {
 
   const addTranscriptMessage: TranscriptContextValue["addTranscriptMessage"] = (itemId, role, text = "", isHidden = false) => {
     setTranscriptItems((prev) => {
-      if (prev.some((log) => log.itemId === itemId && log.type === "MESSAGE")) {
-        console.warn(`[addTranscriptMessage] skipping; message already exists for itemId=${itemId}, role=${role}, text=${text}`);
+      const existingMessage = prev.find(
+        (log) => log.itemId === itemId && log.type === "MESSAGE"
+      );
+      if (existingMessage) {
+        // Skip if message already exists
         return prev;
       }
 

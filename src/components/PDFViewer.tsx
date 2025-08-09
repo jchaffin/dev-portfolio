@@ -16,15 +16,14 @@ interface PDFViewerProps {
   className?: string
 }
 
-function PDFViewer({ pdfUrl, title = 'PDF Document', className = '' }: PDFViewerProps) {
-  const [numPages, setNumPages] = useState<number | null>(null)
-  
-  const [pageNumber, setPageNumber] = useState<number>(1)
+function PDFViewer({ pdfUrl, title: _title = 'PDF Document', className = '' }: PDFViewerProps) {
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pageWidth, setPageWidth] = useState<number>(800);
 
   const options = useMemo(() => ({}), []);
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-  const [pageWidth, setPageWidth] = useState<number>(800)
 
   useEffect(() => {
     const updateWidth = () => {
@@ -51,10 +50,9 @@ function PDFViewer({ pdfUrl, title = 'PDF Document', className = '' }: PDFViewer
     setError(null);
   };
 
-  function onDocumentLoadError(error: Error) {
+  function onDocumentLoadError(_error: Error) {
     setError('Failed to load PDF document')
     setLoading(false)
-    console.error('PDF load error:', error)
   }
 
   function changePage(offset: number) {
@@ -68,7 +66,6 @@ function PDFViewer({ pdfUrl, title = 'PDF Document', className = '' }: PDFViewer
   function nextPage() {
     changePage(1)
   }
-
 
 
   return (

@@ -29,7 +29,7 @@ function LogsPopup({ isVisible, onClose }: LogsPopupProps) {
     }
 
     setPrevEventLogs(loggedEvents);
-  }, [loggedEvents, isVisible]);
+  }, [loggedEvents, isVisible, prevEventLogs.length]);
 
   // Close on escape key
   useEffect(() => {
@@ -80,7 +80,7 @@ function LogsPopup({ isVisible, onClose }: LogsPopupProps) {
               const arrowInfo = getDirectionArrow(log.direction);
               const isError =
                 log.eventName.toLowerCase().includes("error") ||
-                log.eventData?.response?.status_details?.error != null;
+                (log.eventData?.response as { status_details?: { error?: unknown } })?.status_details?.error != null;
 
               return (
                 <div

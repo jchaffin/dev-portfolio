@@ -1,49 +1,5 @@
 @import "tailwindcss";
 
-/* React PDF Styles */
-.react-pdf__Page {
-  margin: 1em auto;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
-}
-
-.react-pdf__Page__canvas {
-  display: block;
-  user-select: none;
-}
-
-.react-pdf__Page__textContent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  opacity: 0.2;
-  line-height: 1.0;
-}
-
-.react-pdf__Page__textContent--disabled {
-  opacity: 0;
-}
-
-.react-pdf__Page__annotations {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  opacity: 0.2;
-  line-height: 1.0;
-}
-
-.react-pdf__Page__annotations--disabled {
-  opacity: 0;
-}
-
-.react-pdf__Page__annotation {
-  position: absolute;
-}
 
 /* ===== THEME VARIABLES ===== */
 :root {
@@ -126,6 +82,19 @@ body {
 
 .border-theme-primary { border-color: var(--border-primary); }
 .border-theme-secondary { border-color: var(--border-secondary); }
+
+/* ===== ACCENT COLOR CLASSES ===== */
+.bg-accent-primary { background-color: var(--accent-primary) !important; }
+.bg-accent-secondary { background-color: var(--accent-secondary) !important; }
+.bg-accent-success { background-color: var(--accent-success) !important; }
+.bg-accent-warning { background-color: var(--accent-warning) !important; }
+.bg-accent-error { background-color: var(--accent-error) !important; }
+
+.text-accent-primary { color: var(--accent-primary) !important; }
+.text-accent-secondary { color: var(--accent-secondary) !important; }
+.text-accent-success { color: var(--accent-success) !important; }
+.text-accent-warning { color: var(--accent-warning) !important; }
+.text-accent-error { color: var(--accent-error) !important; }
 
 /* ===== GRADIENT CLASSES ===== */
 .bg-gradient-primary {
@@ -279,5 +248,53 @@ html {
   }
 }
 
+/* ===== NAVIGATION HOVER EFFECTS ===== */
+.nav-link:hover,
+.theme-toggle:hover {
+  color: var(--accent-primary) !important;
+}
 
+/* React PDF Styles */
+.react-pdf__Page {
+  margin: 1em auto;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
 
+.react-pdf__Page__canvas {
+  display: block;
+  user-select: none;
+}
+
+.react-pdf__Page__textContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1.0;
+}
+
+.react-pdf__Page__textContent--disabled {
+  opacity: 0;
+}
+
+.react-pdf__Page__annotations {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1.0;
+}
+
+.react-pdf__Page__annotations--disabled {
+  opacity: 0;
+}
+
+.react-pdf__Page__annotation {
+  position: absolute;
+}

@@ -18,32 +18,30 @@ export const validateEmail = (email: string): boolean => {
   return emailRegex.test(email)
 }
 
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (..._args: unknown[]) => unknown>(
   func: T,
   wait: number
-): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout | null = null
-  
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => func(...args), wait)
-  }
-}
+): ((..._args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (..._args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(..._args), wait);
+  };
+};
 
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (..._args: unknown[]) => unknown>(
   func: T,
   limit: number
-): ((...args: Parameters<T>) => void) => {
-  let inThrottle = false
-  
-  return (...args: Parameters<T>) => {
+): ((..._args: Parameters<T>) => void) => {
+  let inThrottle: boolean;
+  return (..._args: Parameters<T>) => {
     if (!inThrottle) {
-      func(...args)
-      inThrottle = true
-      setTimeout(() => (inThrottle = false), limit)
+      func(..._args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
     }
-  }
-}
+  };
+};
 
 export const slugify = (text: string): string => {
   return text

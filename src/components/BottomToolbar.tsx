@@ -4,16 +4,16 @@ import { SessionStatus } from "@/types";
 interface BottomToolbarProps {
   sessionStatus: SessionStatus;
   isPTTActive: boolean;
-  setIsPTTActive: (val: boolean) => void;
+  setIsPTTActive: (_val: boolean) => void;
   isPTTUserSpeaking: boolean;
   handleTalkButtonDown: () => void;
   handleTalkButtonUp: () => void;
   isLogsPopupVisible: boolean;
-  setIsLogsPopupVisible: (val: boolean) => void;
+  setIsLogsPopupVisible: (_val: boolean) => void;
   isAudioPlaybackEnabled: boolean;
-  setIsAudioPlaybackEnabled: (val: boolean) => void;
+  setIsAudioPlaybackEnabled: (_val: boolean) => void;
   codec: string;
-  onCodecChange: (newCodec: string) => void;
+  onCodecChange: (_newCodec: string) => void;
 }
 
 function BottomToolbar({
@@ -33,8 +33,7 @@ function BottomToolbar({
   const isConnected = sessionStatus === "CONNECTED";
 
   const handleCodecChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newCodec = e.target.value;
-    onCodecChange(newCodec);
+    onCodecChange(e.target.value);
   };
 
   return (

@@ -34,10 +34,12 @@ const ContactSection = () => {
           className="text-center"
         >
           <h2 className="text-4xl font-bold mb-6 text-theme-primary">
-            Let's Work Together
+            Let&apos;s Work Together
           </h2>
-          <p className="text-lg mb-8 text-theme-secondary">
-            I'm always open to discussing new opportunities and interesting projects
+          <p className="text-theme-secondary mb-6">
+            I&apos;m always interested in new opportunities and collaborations. 
+            Whether you&apos;d like to discuss a project, job opportunity, or just want to connect, 
+            feel free to reach out!
           </p>
           <div className="flex justify-center space-x-6">
             {socialLinks.map((item, index) => (

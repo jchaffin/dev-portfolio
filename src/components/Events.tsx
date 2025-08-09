@@ -29,7 +29,7 @@ function Events({ isExpanded }: EventsProps) {
     }
 
     setPrevEventLogs(loggedEvents);
-  }, [loggedEvents, isExpanded]);
+  }, [loggedEvents, isExpanded, prevEventLogs.length]);
 
   return (
     <div
@@ -49,7 +49,7 @@ function Events({ isExpanded }: EventsProps) {
               const arrowInfo = getDirectionArrow(log.direction);
               const isError =
                 log.eventName.toLowerCase().includes("error") ||
-                log.eventData?.response?.status_details?.error != null;
+                (log.eventData?.response as { status_details?: { error?: unknown } })?.status_details?.error != null;
 
               return (
                 <div

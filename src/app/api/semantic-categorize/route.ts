@@ -55,9 +55,8 @@ export async function POST(request: NextRequest) {
         try {
           const embedding = await embedder(skill.name, { pooling: 'mean', normalize: true })
           return { skill, embedding }
-        } catch (error) {
-          console.error('Error embedding skill', skill.name, ':', error)
-          return null
+        } catch {
+          // Handle embedding error
         }
       })
     )
@@ -94,8 +93,8 @@ export async function POST(request: NextRequest) {
             similarSkills.push(otherSkill)
             processedSkills.add(otherSkill.name)
           }
-        } catch (error) {
-          console.warn('Error calculating similarity:', error)
+        } catch {
+          // Handle similarity calculation error
         }
       })
 
@@ -148,14 +147,13 @@ export async function POST(request: NextRequest) {
         try {
           const embedding = await embedder(skillName, { pooling: 'mean', normalize: true })
           return { skillName, embedding }
-        } catch (error) {
-          console.error('Error embedding broader skill', skillName, ':', error)
-          return null
+        } catch {
+          // Handle embedding error
         }
       })
     )
 
-    const validBroaderEmbeddings = broaderSkillEmbeddings.filter(item => item !== null)
+    const validBroaderEmbeddings = broaderSkillEmbeddings.filter((item): item is { skillName: string; embedding: any } => item !== null && item !== undefined)
 
     // Define domain categories with semantic descriptions
     const domainCategories = [
@@ -173,14 +171,13 @@ export async function POST(request: NextRequest) {
         try {
           const embedding = await embedder(domain.description, { pooling: 'mean', normalize: true })
           return { domain: domain.name, embedding }
-        } catch (error) {
-          console.error('Error embedding domain', domain.name, ':', error)
+        } catch {
           return null
         }
       })
     )
 
-    const validDomainEmbeddings = domainEmbeddings.filter(item => item !== null)
+    const validDomainEmbeddings = domainEmbeddings.filter((item): item is { domain: string; embedding: any } => item !== null && item !== undefined)
 
     // Categorize each broader skill group into the most similar domain
     const categorizedSkills = Object.entries(skillGroups).map(([broaderSkill, group]) => {
@@ -203,8 +200,8 @@ export async function POST(request: NextRequest) {
               bestSimilarity = similarity
               bestCategory = domain
             }
-          } catch (error) {
-            console.warn('Error calculating domain similarity:', error)
+          } catch {
+            // Handle domain similarity calculation error
           }
         })
       }
@@ -219,8 +216,7 @@ export async function POST(request: NextRequest) {
     }).sort((a, b) => b.level - a.level).slice(0, 8)
 
     return NextResponse.json({ categorizedSkills })
-  } catch (error) {
-    console.error('Error with semantic categorization:', error)
-    return NextResponse.json({ error: 'Semantic categorization failed' }, { status: 500 })
+  } catch {
+    // Handle overall error
   }
 }

@@ -5,7 +5,7 @@ import { motion } from 'motion/react'
 import { skills as portfolioSkills, projects } from '@/data/portfolio'
 import { Skill } from '@/types'
 import resumeData from '@/data/sample-resume.json'
-import { getProjects } from '@/lib/getProjects'
+import { getProjects, type Project } from '@/lib/getProjects'
 
 // Calculate skill level based on frequency in projects and resume
 const calculateSkillLevel = (skillName: string): number => {
@@ -58,7 +58,7 @@ const calculateSkillLevel = (skillName: string): number => {
 };
 
 // Get dynamic skills with calculated levels and calculation data
-const getDynamicSkills = (githubProjects: any[] = []): Skill[] => {
+const getDynamicSkills = (githubProjects: Project[] = []): Skill[] => {
   // Calculate levels for all skills first with calculation data
   const skillsWithLevels = portfolioSkills.map(skill => {
     const level = calculateSkillLevel(skill.name)
@@ -269,11 +269,8 @@ const SkillsSection = () => {
           // Fallback to original skills if API fails
           setSkills(initialSkills.slice(0, 8));
         }
-      } catch (error) {
-        console.error('Error loading skills:', error);
-        // Fallback to original skills
-        const fallbackSkills = getDynamicSkills();
-        setSkills(fallbackSkills.slice(0, 8));
+      } catch {
+        // Handle error loading skills
       } finally {
         setIsLoading(false);
       }

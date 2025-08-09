@@ -48,7 +48,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           baseClasses,
           variants[variant],
           sizes[size],
-          className
+          className,
+          disabled && "opacity-50 cursor-not-allowed",
+          isLoading && "opacity-50 cursor-not-allowed"
         )}
         disabled={disabled || isLoading}
         {...props}
@@ -92,7 +94,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ),
         disabled: disabled || isLoading,
         ...props
-      } as any)
+      } as ButtonProps)
     }
 
     if (animate) {

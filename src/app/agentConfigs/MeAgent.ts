@@ -1,6 +1,6 @@
-import { RealtimeAgent, tool, RealtimeItem } from '@openai/agents/realtime';
-import { projects, experiences, skills } from '@/data/portfolio';
-import resumeData from '@/data/sample-resume.json';
+import { tool } from './types'
+import { RealtimeAgent } from '@openai/agents/realtime'
+import { projects } from '@/data/portfolio'
 
 // Create the instructions with portfolio context
 const createMeAgentInstructions = () => {
@@ -323,7 +323,7 @@ export const meAgent = new RealtimeAgent({
               }))
             };
           }
-        } catch (error) {
+        } catch {
           return { success: false, message: 'Error fetching skills information' };
         }
       }
@@ -366,7 +366,7 @@ export const meAgent = new RealtimeAgent({
             success: true,
             repositories: recentRepos
           };
-        } catch (error) {
+        } catch {
           return { success: false, message: 'Error fetching GitHub repositories' };
         }
       }

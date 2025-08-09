@@ -20,10 +20,7 @@ function useAudioDownload() {
       micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = micStream; // Store for cleanup
     } catch (err) {
-      console.error("Error getting microphone stream:", err);
-      // Fallback to an empty MediaStream if microphone access fails.
-      micStream = new MediaStream();
-      micStreamRef.current = null;
+      throw err;
     }
 
     // Create an AudioContext to merge the streams.
@@ -35,7 +32,7 @@ function useAudioDownload() {
       const remoteSource = audioContext.createMediaStreamSource(remoteStream);
       remoteSource.connect(destination);
     } catch (err) {
-      console.error("Error connecting remote stream to the audio context:", err);
+      throw err;
     }
 
     // Connect the microphone audio stream.
@@ -43,7 +40,7 @@ function useAudioDownload() {
       const micSource = audioContext.createMediaStreamSource(micStream);
       micSource.connect(destination);
     } catch (err) {
-      console.error("Error connecting microphone stream to the audio context:", err);
+      throw err;
     }
 
     const options = { mimeType: "audio/webm" };
@@ -58,7 +55,7 @@ function useAudioDownload() {
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
     } catch (err) {
-      console.error("Error starting MediaRecorder with combined stream:", err);
+      throw err;
     }
   };
 
@@ -75,9 +72,7 @@ function useAudioDownload() {
 
     // Clean up the microphone stream
     if (micStreamRef.current) {
-      console.log("🎤 Cleaning up microphone stream from useAudioDownload");
       micStreamRef.current.getTracks().forEach(track => {
-        console.log("Stopping microphone track from useAudioDownload:", track.kind, track.id);
         track.stop();
         track.enabled = false;
       });
@@ -99,7 +94,6 @@ function useAudioDownload() {
     }
 
     if (recordedChunksRef.current.length === 0) {
-      console.warn("No recorded chunks found to download.");
       return;
     }
     
@@ -126,7 +120,7 @@ function useAudioDownload() {
       // Clean up the blob URL after a short delay.
       setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (err) {
-      console.error("Error converting recording to WAV:", err);
+      throw err;
     }
   };
 

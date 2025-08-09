@@ -66,12 +66,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ResponseD
     };
 
     return NextResponse.json(responseData);
-  } catch (error) {
-    console.error("Error processing response request:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
   

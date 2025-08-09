@@ -2,17 +2,16 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 import { motion } from 'motion/react'
-import { useSearchParams } from "next/navigation";
 import { Activity, FileText, Volume2, Send } from 'lucide-react'
 import { experiences, projects, skills } from '@/data/portfolio'
 import resumeData from '@/data/sample-resume.json'
 import ReactMarkdown from "react-markdown";
 
 // Types
-import { SessionStatus, PortfolioContext, VoiceAIState, VoiceAIActions, MessageItem } from "@/types";
-import { VOICE_AI_CONSTANTS, SESSION_STATUS } from "@/lib/constants";
+import { SessionStatus, PortfolioContext } from "@/types";
+import { VOICE_AI_CONSTANTS } from "@/lib/constants";
 
-import { useEvent, EventProvider } from "@/contexts/EventContext";
+import { EventProvider } from "@/contexts/EventContext";
 import { useTranscript, TranscriptProvider } from '@/contexts/TranscriptContext'
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 
@@ -20,7 +19,6 @@ import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 import { meAgent } from "@/app/agentConfigs/MeAgent";
 
 import useAudioDownload from "@/hooks/useAudioDownload";
-import { useHandleSessionHistory } from "@/hooks/useHandleSessionHistory";
 
 // Voice AI Section
 const VoiceAISection = () => {
@@ -58,11 +56,7 @@ const VoiceAIContent = () => {
       contact: resumeData.contact,
     }
   }
-  const searchParams = useSearchParams()!;
-  const urlCodec = searchParams.get("codec") || VOICE_AI_CONSTANTS.DEFAULT_CODEC;
-  
-  const { loggedEvents } = useEvent();
-  const { transcriptItems, addTranscriptBreadcrumb, clearTranscript } = useTranscript();
+  const { transcriptItems } = useTranscript();
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
@@ -73,7 +67,6 @@ const VoiceAIContent = () => {
     el.style.display = 'none';
     el.volume = VOICE_AI_CONSTANTS.AUDIO_VOLUME; // Ensure volume is set
     document.body.appendChild(el);
-    console.log("🎵 Audio element created:", el);
     return el;
   }, []);
 
@@ -84,19 +77,16 @@ const VoiceAIContent = () => {
 
   // Initialize agent selection from URL parameters
   useEffect(() => {
-    console.log("🎯 MEAGENT SELECTED - Portfolio assistant ready");
-    console.log("MeAgent config:", meAgent);
+    // Agent selection initialization logic can be added here if needed
   }, []);
 
   const {
     connect,
     disconnect,
     sendUserText,
-    sendEvent,
     mute,
   } = useRealtimeSession({
     onConnectionChange: (s) => {
-      console.log("🔄 Session status changed:", s);
       setSessionStatus(s as SessionStatus);
     },
   });
@@ -106,129 +96,72 @@ const VoiceAIContent = () => {
       if (typeof window === 'undefined') return true;
       const stored = localStorage.getItem('audioPlaybackEnabled');
       return stored ? stored === 'true' : true;
-    },
-  );
-  
-  const { startRecording, stopRecording, downloadRecording } =
-    useAudioDownload();
-  
-  const sendClientEvent = (eventObj: any, eventNameSuffix = "") => {
-    try {
-      sendEvent(eventObj);
-    } catch (err) {
-      console.error('Failed to send via SDK', err);
     }
-  };
+  );
 
-  useHandleSessionHistory();
+  const { startRecording, stopRecording } = useAudioDownload();
 
-  // Fetch ephemeral key for realtime session
   const fetchEphemeralKey = async (): Promise<string | null> => {
-    const tokenResponse = await fetch("/api/session");
-    const data = await tokenResponse.json();
+    try {
+      const response = await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-    if (!data.client_secret?.value) {
-      console.error("No ephemeral key provided by the server");
-      setSessionStatus("DISCONNECTED");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.ephemeralKey || null;
+    } catch {
       return null;
     }
-
-    return data.client_secret.value;
   };
 
-  // Connect to realtime session
   const connectToRealtime = async () => {
-    console.log("🚀 CONNECT ATTEMPT - Agent config: meAgent");
-    console.log("Current sessionStatus:", sessionStatus);
-    
-    if (sessionStatus !== "DISCONNECTED") {
-      console.log("❌ CONNECTION BLOCKED - Session status:", sessionStatus);
+    if (sessionStatus === "CONNECTED" || sessionStatus === "CONNECTING") {
       return;
     }
-    console.log("Setting status to CONNECTING");
-    setSessionStatus("CONNECTING");
 
     try {
-      console.log("Fetching ephemeral key...");
-      const EPHEMERAL_KEY = await fetchEphemeralKey();
-      if (!EPHEMERAL_KEY) {
-        console.error("No ephemeral key received");
+      const ephemeralKey = await fetchEphemeralKey();
+      if (!ephemeralKey) {
         return;
       }
-      console.log("Ephemeral key received successfully");
 
-      console.log("🤖 CONNECTING - Agent config set: meAgent");
-      console.log("🎵 Audio element for connection:", sdkAudioElement);
-      
+      const sdkAudioElement = audioElementRef.current;
+      if (!sdkAudioElement) {
+        return;
+      }
+
       await connect({
-        getEphemeralKey: async () => EPHEMERAL_KEY,
+        getEphemeralKey: () => Promise.resolve(ephemeralKey),
         initialAgents: [meAgent],
         audioElement: sdkAudioElement,
-        outputGuardrails: [], // Temporarily disable guardrails
         extraContext: {
-          addTranscriptBreadcrumb,
-          portfolioContext,
+          portfolio: portfolioContext,
         },
+        outputGuardrails: [],
       });
-      console.log("✅ CONNECTION SUCCESSFUL - Agent connected");
-      
-      // Trigger initial greeting after connection is established
-      setTimeout(() => {
-        console.log("🎤 Triggering initial greeting");
-        sendClientEvent({ type: "response.create" });
-      }, VOICE_AI_CONSTANTS.INITIAL_GREETING_DELAY);
-      
-    } catch (err) {
-      console.error("Error connecting via SDK:", err);
-      setSessionStatus("DISCONNECTED");
+    } catch {
     }
   };
 
-  //  disconnect from realtime session
   const disconnectFromRealtime = async () => {
-    console.log("🔌 Starting disconnect process...");
-    
-    // First, stop the active microphone stream
-    if (microphoneStream) {
-      console.log("🎤 Stopping microphone stream...");
-      try {
-        // Stop all tracks and disable them
+    try {
+      if (microphoneStream) {
         microphoneStream.getTracks().forEach(track => {
-          console.log("Stopping microphone track:", track.kind, track.id);
           track.stop();
-          track.enabled = false;
         });
-        
-        // Clear the stream reference
         setMicrophoneStream(null);
-        console.log("✅ Microphone stream stopped successfully");
-      } catch (error) {
-        console.error("Error stopping microphone stream:", error);
       }
-    }
-    
-    // Stop any recording that might be active
-    try {
-      stopRecording();
-      console.log("✅ Recording stopped");
-    } catch (error) {
-      console.error("Error stopping recording:", error);
-    }
-    
-    // Disconnect from the realtime session
-    try {
+
       await disconnect();
-      console.log("✅ Realtime session disconnected");
-    } catch (error) {
-      console.error('Error disconnecting from realtime session:', error);
-    } finally {
-      setSessionStatus("DISCONNECTED");
-      clearTranscript();
-      console.log("🧹 Disconnect process completed");
+    } catch {
     }
   };
 
-  // send text message to realtime session
   const handleSendTextMessage = () => {
     if (!userText.trim() || sessionStatus !== "CONNECTED") return;
     
@@ -240,30 +173,23 @@ const VoiceAIContent = () => {
   // Removed talk button functionality - using continuous listening instead
 
   const onToggleConnection = async () => {
-    console.log("Connect button clicked, current status:", sessionStatus);
-    
     if (sessionStatus === "CONNECTED") {
-      console.log("Disconnecting...");
       await disconnectFromRealtime();
     } else {
-      console.log("Starting connection...");
       
       // Request microphone permission first
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log("Microphone permission granted");
         setMicrophoneStream(stream); // Store the stream for later cleanup
         
         // Ensure audio element is ready for autoplay
         if (sdkAudioElement) {
           sdkAudioElement.muted = false;
           sdkAudioElement.volume = VOICE_AI_CONSTANTS.AUDIO_VOLUME;
-          console.log("🎵 Audio element prepared for autoplay");
         }
         
         connectToRealtime();
-      } catch (error) {
-        console.error("Microphone permission denied:", error);
+      } catch {
         alert("Microphone permission is required for voice interaction. Please allow microphone access and try again.");
       }
     }
@@ -287,19 +213,16 @@ const VoiceAIContent = () => {
 
   useEffect(() => {
     if (audioElementRef.current) {
-      console.log("🔊 Audio playback setting:", isAudioPlaybackEnabled);
       if (isAudioPlaybackEnabled) {
         audioElementRef.current.muted = false;
         audioElementRef.current.volume = VOICE_AI_CONSTANTS.AUDIO_VOLUME;
-        audioElementRef.current.play().catch((err) => {
-          console.warn("Autoplay may be blocked by browser:", err);
+        audioElementRef.current.play().catch(() => {
+          // Audio playback failed, but we don't need to handle this error
         });
-        console.log("🔊 Audio unmuted and playing");
       } else {
         // Mute and pause to avoid brief audio blips before pause takes effect.
         audioElementRef.current.muted = true;
         audioElementRef.current.pause();
-        console.log("🔇 Audio muted and paused");
       }
     }
 
@@ -307,20 +230,18 @@ const VoiceAIContent = () => {
     // user disables playback. 
     try {
       mute(!isAudioPlaybackEnabled);
-    } catch (err) {
-      console.warn('Failed to toggle SDK mute', err);
+    } catch {
     }
-  }, [isAudioPlaybackEnabled]);
+  }, [isAudioPlaybackEnabled, mute]);
 
   useEffect(() => {
     if (sessionStatus === 'CONNECTED') {
       try {
         mute(!isAudioPlaybackEnabled);
-      } catch (err) {
-        console.warn('mute sync after connect failed', err);
+      } catch {
       }
     }
-  }, [sessionStatus, isAudioPlaybackEnabled]);
+  }, [sessionStatus, isAudioPlaybackEnabled, mute]);
 
   useEffect(() => {
     if (sessionStatus === "CONNECTED" && audioElementRef.current?.srcObject) {
@@ -333,19 +254,16 @@ const VoiceAIContent = () => {
     if (sessionStatus === "DISCONNECTED") {
       stopRecording();
     }
-  }, [sessionStatus]);
+  }, [sessionStatus, startRecording, stopRecording]);
 
   
   // Cleanup on component unmount
   useEffect(() => {
     return () => {
-      console.log("🧹 Component unmounting, cleaning up...");
-      
       // Stop recording
       stopRecording();
       
       if (microphoneStream) {
-        console.log("🧹 CLEANUP - Stopping microphone on component unmount");
         microphoneStream.getTracks().forEach(track => {
           track.stop();
         });
@@ -353,13 +271,12 @@ const VoiceAIContent = () => {
       }
       
       if (sessionStatus === "CONNECTED") {
-        console.log("🧹 CLEANUP - Disconnecting session on component unmount");
-        disconnect().catch(error => {
-          console.error('Error during cleanup disconnect:', error);
+        disconnect().catch(() => {
+          // Disconnect failed, but we don't need to handle this error
         });
       }
     };
-  }, []); // Empty dependency array - only run on unmount
+  }, [disconnect, microphoneStream, sessionStatus, stopRecording]);
 
   return (
     <section id="voice-ai" className="py-20 bg-gradient-primary dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 relative overflow-hidden">
@@ -422,7 +339,7 @@ const VoiceAIContent = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-3 h-3 rounded-full ${sessionStatus === 'CONNECTED' ? 'bg-accent-success' : 'bg-accent-error'} animate-pulse`}></div>
-                  <h3 className="text-xl font-semibold text-theme-primary">Jacob's AI Assistant</h3>
+                  <h3 className="text-xl font-semibold text-theme-primary">Jacob&apos;s AI Assistant</h3>
                 </div>
                 <div className="flex items-center gap-3">
                   <button

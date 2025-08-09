@@ -23,10 +23,7 @@ export async function GET() {
 
     const repos = await githubRes.json();
     return NextResponse.json(repos);
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+  } catch {
+    return Response.json({ error: 'Failed to fetch projects' }, { status: 500 });
   }
 }

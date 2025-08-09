@@ -1,14 +1,14 @@
-import { GuardrailOutputZod, GuardrailOutput } from '@/types';
-import { zodTextFormat } from 'openai/helpers/zod';
-
 // Validator that calls the /api/responses endpoint to
 // validates the realtime output according to moderation policies. 
 // This will prevent the realtime model from responding in undesired ways
 // By sending it a corrective message and having it redirect the conversation.
+
+import { GuardrailOutput, GuardrailOutputZod } from '@/types/realtime';
+
 export async function runGuardrailClassifier(
   message: string,
   companyName: string = 'newTelco',
-): Promise<GuardrailOutput> {
+): Promise<GuardrailOutput | null> {
   const messages = [
     {
       role: 'user',
@@ -51,21 +51,16 @@ export async function runGuardrailClassifier(
   });
 
   if (!response.ok) {
-    console.warn('Server returned an error:', response);
-    return Promise.reject('Error with runGuardrailClassifier.');
+    // Handle server error
+    return null;
   }
 
-  const data = await response.json();
-
   try {
-    const output = GuardrailOutputZod.parse(data.output_parsed);
-    return {
-      ...output,
-      testText: message,
-    };
-  } catch (error) {
-    console.error('Error parsing the message content as GuardrailOutput:', error);
-    return Promise.reject('Failed to parse guardrail output.');
+    const data = await response.json();
+    return GuardrailOutputZod.parse(data);
+  } catch {
+    // Handle parsing error
+    return null;
   }
 }
 
@@ -88,10 +83,10 @@ export function createModerationGuardrail(companyName: string) {
     async execute({ agentOutput }: RealtimeOutputGuardrailArgs): Promise<RealtimeOutputGuardrailResult> {
       try {
         const res = await runGuardrailClassifier(agentOutput, companyName);
-        const triggered = res.moderationCategory !== 'NONE';
+        const triggered = res?.moderationCategory !== 'NONE';
         return {
-          tripwireTriggered: triggered,
-          outputInfo: res,
+          tripwireTriggered: triggered || false,
+          outputInfo: res || { error: 'guardrail_failed' },
         };
       } catch {
         return {

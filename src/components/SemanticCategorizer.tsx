@@ -10,7 +10,7 @@ interface Skill {
 
 interface SemanticCategorizerProps {
   skills: Skill[]
-  onCategorized: (categorizedSkills: Skill[]) => void
+  onCategorized: (_categorizedSkills: Skill[]) => void
 }
 
 const SemanticCategorizer = ({ skills, onCategorized }: SemanticCategorizerProps) => {
@@ -34,8 +34,7 @@ const SemanticCategorizer = ({ skills, onCategorized }: SemanticCategorizerProps
 
         const { categorizedSkills } = await response.json()
         onCategorized(categorizedSkills)
-      } catch (error) {
-        console.error('Error with semantic categorization:', error)
+      } catch {
         // Return original skills if semantic categorization fails
         onCategorized(skills.slice(0, 8))
       } finally {

@@ -35,7 +35,7 @@ export default function ThemeToggle() {
 
   return (
     <button
-      className="inline-flex items-center justify-center rounded-full p-1 text-xl shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-primary text-theme-primary hover:bg-theme-secondary"
+      className="inline-flex items-center justify-center rounded-full p-1 text-xl shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-primary text-theme-primary cursor-pointer theme-toggle"
       style={{ position: 'static', margin: 0, zIndex: 1 }}
       onClick={toggleTheme}
       aria-label="Toggle dark mode"

@@ -99,7 +99,7 @@ export interface PortfolioContext {
     skills: Skill[];
     experience: Experience[];
     education: Education[];
-    contact: any;
+    contact: Record<string, unknown>;
   };
 }
 
@@ -114,7 +114,7 @@ export interface VoiceAIActions {
   connectToRealtime: () => Promise<void>;
   disconnectFromRealtime: () => Promise<void>;
   handleSendTextMessage: () => void;
-  setUserText: (text: string) => void;
+  setUserText: (_text: string) => void;
   toggleAudioPlayback: () => void;
 }
 

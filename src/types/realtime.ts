@@ -16,6 +16,28 @@ export const ModerationCategoryZod = z.enum([...MODERATION_CATEGORIES]);
 
 export type SessionStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
 
+// Missing type definitions
+export interface FunctionArgs {
+  [key: string]: unknown;
+}
+
+export interface FunctionResult {
+  [key: string]: unknown;
+}
+
+export interface Arguments {
+  [key: string]: unknown;
+}
+
+export interface Content {
+  type: string;
+  text?: string;
+  transcript?: string;
+  name?: string;
+  arguments?: Arguments;
+  [key: string]: unknown;
+}
+
 export interface ToolParameterProperty {
   type: string;
   description?: string;
@@ -48,7 +70,7 @@ export interface AgentConfig {
   tools: Tool[];
   toolLogic?: Record<
     string,
-    (args: any, transcriptLogsFiltered: TranscriptItem[], addTranscriptBreadcrumb?: (title: string, data?: any) => void) => Promise<any> | any
+    (_args: FunctionArgs, _transcriptLogsFiltered: TranscriptItem[], _addTranscriptBreadcrumb?: (_title: string, _data?: unknown) => void) => Promise<FunctionResult> | FunctionResult
   >;
   // addTranscriptBreadcrumb is a param in case we want to add additional breadcrumbs, e.g. for nested tool calls from a supervisor agent.
   downstreamAgents?:
@@ -70,7 +92,7 @@ export interface TranscriptItem {
   type: "MESSAGE" | "BREADCRUMB";
   role?: "user" | "assistant";
   title?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   expanded: boolean;
   timestamp: string;
   createdAtMs: number;
@@ -84,7 +106,7 @@ export interface Log {
   timestamp: string;
   direction: string;
   eventName: string;
-  data: any;
+  data: unknown;
   expanded: boolean;
   type: string;
 }
@@ -104,27 +126,23 @@ export interface ServerEvent {
     type?: string;
     status?: string;
     name?: string;
-    arguments?: string;
+    arguments?: Arguments;
     role?: "user" | "assistant";
-    content?: {
-      type?: string;
-      transcript?: string | null;
-      text?: string;
-    }[];
+    content?: Content[];
   };
   response?: {
     output?: {
       id: string;
       type?: string;
       name?: string;
-      arguments?: any;
+      arguments?: Arguments;
       call_id?: string;
       role: string;
-      content?: any;
+      content?: Content[];
     }[];
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     status_details?: {
-      error?: any;
+      error?: Error;
     };
   };
 }
@@ -135,7 +153,7 @@ export interface LoggedEvent {
   expanded: boolean;
   timestamp: string;
   eventName: string;
-  eventData: Record<string, any>; // can have arbitrary objects logged
+  eventData: Record<string, unknown>; // can have arbitrary objects logged
 }
 
 // Update the GuardrailOutputZod schema to use the shared ModerationCategoryZod

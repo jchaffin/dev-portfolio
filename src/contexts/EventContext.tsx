@@ -1,15 +1,27 @@
 "use client";
 
 import React, { createContext, useContext, useState, FC, PropsWithChildren } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { LoggedEvent } from "@/types";
+
+interface EventData {
+  [key: string]: unknown;
+  event_id?: string | number;
+}
+
+interface HistoryItem {
+  type: string;
+  role: string;
+  content: unknown[];
+  status?: string;
+  name?: string;
+}
 
 type EventContextValue = {
   loggedEvents: LoggedEvent[];
-  logClientEvent: (eventObj: Record<string, any>, eventNameSuffix?: string) => void;
-  logServerEvent: (eventObj: Record<string, any>, eventNameSuffix?: string) => void;
-  logHistoryItem: (item: any) => void;
-  toggleExpand: (id: number | string) => void;
+  logClientEvent: (_eventObj: EventData, _eventNameSuffix?: string) => void;
+  logServerEvent: (_eventObj: EventData, _eventNameSuffix?: string) => void;
+  logHistoryItem: (_item: HistoryItem) => void;
+  toggleExpand: (_id: number | string) => void;
 };
 
 const EventContext = createContext<EventContextValue | undefined>(undefined);
@@ -17,8 +29,8 @@ const EventContext = createContext<EventContextValue | undefined>(undefined);
 export const EventProvider: FC<PropsWithChildren> = ({ children }) => {
   const [loggedEvents, setLoggedEvents] = useState<LoggedEvent[]>([]);
 
-  function addLoggedEvent(direction: "client" | "server", eventName: string, eventData: Record<string, any>) {
-    const id = eventData.event_id || uuidv4();
+  function addLoggedEvent(direction: "client" | "server", eventName: string, eventData: EventData) {
+    const id = typeof eventData.event_id === 'number' ? eventData.event_id : Date.now();
     setLoggedEvents((prev) => [
       ...prev,
       {
@@ -45,12 +57,12 @@ export const EventProvider: FC<PropsWithChildren> = ({ children }) => {
   const logHistoryItem: EventContextValue['logHistoryItem'] = (item) => {
     let eventName = item.type;
     if (item.type === 'message') {
-      eventName = `${item.role}.${item.status}`;
+      eventName = `${item.role}.${item.status || 'unknown'}`;
     }
     if (item.type === 'function_call') {
-      eventName = `function.${item.name}.${item.status}`;
+      eventName = `function.${item.name || 'unknown'}.${item.status || 'unknown'}`;
     }
-    addLoggedEvent('server', eventName, item);
+    addLoggedEvent('server', eventName, item as unknown as EventData);
   };
 
   const toggleExpand: EventContextValue['toggleExpand'] = (id) => {
