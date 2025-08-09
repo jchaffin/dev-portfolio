@@ -65,8 +65,9 @@ const VoiceAIContent = () => {
     const el = document.createElement('audio');
     el.autoplay = true;
     el.style.display = 'none';
-    el.volume = VOICE_AI_CONSTANTS.AUDIO_VOLUME; // Ensure volume is set
+    el.volume = 1.0; // Ensure volume is set
     document.body.appendChild(el);
+    console.log("🎵 Audio element created:", el);
     return el;
   }, []);
 
@@ -74,6 +75,31 @@ const VoiceAIContent = () => {
     useState<SessionStatus>("DISCONNECTED");
 
   const [microphoneStream, setMicrophoneStream] = useState<MediaStream | null>(null);
+
+  // Attach SDK audio element once it exists (after first render in browser)
+  useEffect(() => {
+    if (sdkAudioElement && !audioElementRef.current) {
+      audioElementRef.current = sdkAudioElement;
+      console.log("🎵 Audio element attached to ref:", sdkAudioElement);
+      
+      // Add event listeners to debug audio
+      sdkAudioElement.addEventListener('loadedmetadata', () => {
+        console.log("🎵 Audio metadata loaded");
+      });
+      
+      sdkAudioElement.addEventListener('play', () => {
+        console.log("🎵 Audio started playing");
+      });
+      
+      sdkAudioElement.addEventListener('pause', () => {
+        console.log("🎵 Audio paused");
+      });
+      
+      sdkAudioElement.addEventListener('error', (e) => {
+        console.error("🎵 Audio error:", e);
+      });
+    }
+  }, [sdkAudioElement]);
 
   // Initialize agent selection from URL parameters
   useEffect(() => {
@@ -87,6 +113,7 @@ const VoiceAIContent = () => {
     mute,
   } = useRealtimeSession({
     onConnectionChange: (s) => {
+      console.log("🔄 Session status changed:", s);
       setSessionStatus(s as SessionStatus);
     },
   });
@@ -96,8 +123,19 @@ const VoiceAIContent = () => {
       if (typeof window === 'undefined') return true;
       const stored = localStorage.getItem('audioPlaybackEnabled');
       return stored ? stored === 'true' : true;
-    }
+    },
   );
+
+  const { startRecording, stopRecording, downloadRecording } =
+    useAudioDownload();
+  
+  const sendClientEvent = (eventObj: any, eventNameSuffix = "") => {
+    try {
+      sendEvent(eventObj);
+    } catch (err) {
+      console.error('Failed to send via SDK', err);
+    }
+  };
 
   const { startRecording, stopRecording } = useAudioDownload();
 
@@ -125,16 +163,18 @@ const VoiceAIContent = () => {
     }
 
     try {
+      console.log("Fetching ephemeral key...");
       const ephemeralKey = await fetchEphemeralKey();
       if (!ephemeralKey) {
+        console.error("No ephemeral key received");
         return;
       }
+      console.log("Ephemeral key received successfully");
 
       const sdkAudioElement = audioElementRef.current;
-      if (!sdkAudioElement) {
-        return;
-      }
-
+      console.log("🤖 AGENT NAMES:", agentConfigSet?.map(agent => agent.name));
+      console.log("🎵 Audio element for connection:", sdkAudioElement);
+      
       await connect({
         getEphemeralKey: () => Promise.resolve(ephemeralKey),
         initialAgents: [meAgent],
@@ -144,21 +184,92 @@ const VoiceAIContent = () => {
         },
         outputGuardrails: [],
       });
+      console.log("✅ CONNECTION SUCCESSFUL - Agent connected");
+      
+      // Trigger initial greeting after connection is established
+      setTimeout(() => {
+        console.log("🎤 Triggering initial greeting");
+        sendClientEvent({ type: "response.create" });
+      }, 1000);
+      
     } catch {
     }
   };
 
   const disconnectFromRealtime = async () => {
-    try {
+    console.log("🔌 Starting disconnect process...");
+    
+    // First, stop the active microphone stream
       if (microphoneStream) {
+      console.log("🎤 Stopping microphone stream...");
+      try {
+        // Stop all tracks and disable them
         microphoneStream.getTracks().forEach(track => {
+          console.log("Stopping microphone track:", track.kind, track.id);
           track.stop();
+          track.enabled = false;
         });
+        
+        // Clear the stream reference
         setMicrophoneStream(null);
+        console.log("✅ Microphone stream stopped successfully");
+      } catch (error) {
+        console.error("Error stopping microphone stream:", error);
       }
-
+    }
+    
+    // Stop any recording that might be active
+    try {
+      stopRecording();
+      console.log("✅ Recording stopped");
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+    }
+    
+    // Disconnect from the realtime session
+    try {
       await disconnect();
-    } catch {
+      console.log("✅ Realtime session disconnected");
+    } catch (error) {
+      console.error('Error disconnecting from realtime session:', error);
+    } finally {
+      setSessionStatus("DISCONNECTED");
+      clearTranscript();
+      console.log("🧹 Disconnect process completed");
+    }
+  };
+
+  const sendSimulatedUserMessage = (text: string) => {
+    const id = uuidv4().slice(0, 32);
+
+    sendClientEvent({
+      type: 'conversation.item.create',
+      item: {
+        id,
+        type: 'message',
+        role: 'user',
+        content: [{ type: 'input_text', text }],
+      },
+    });
+    sendClientEvent({ type: 'response.create' }, '(simulated user text message)');
+  };
+
+  const updateSession = (shouldTriggerResponse: boolean = false) => {
+    // Use server-side voice activity detection for continuous listening
+    const turnDetection = { type: "server_vad" as const };
+
+    sendClientEvent({
+      type: "session.update",
+      session: {
+        turn_detection: turnDetection,
+        audio_playback: {
+          mode: isAudioPlaybackEnabled ? "enabled" : "disabled",
+        },
+      },
+    });
+
+    if (shouldTriggerResponse) {
+      sendClientEvent({ type: "response.create" });
     }
   };
 
@@ -185,7 +296,8 @@ const VoiceAIContent = () => {
         // Ensure audio element is ready for autoplay
         if (sdkAudioElement) {
           sdkAudioElement.muted = false;
-          sdkAudioElement.volume = VOICE_AI_CONSTANTS.AUDIO_VOLUME;
+          sdkAudioElement.volume = 1.0;
+          console.log("🎵 Audio element prepared for autoplay");
         }
         
         connectToRealtime();
@@ -213,16 +325,19 @@ const VoiceAIContent = () => {
 
   useEffect(() => {
     if (audioElementRef.current) {
+      console.log("🔊 Audio playback setting:", isAudioPlaybackEnabled);
       if (isAudioPlaybackEnabled) {
         audioElementRef.current.muted = false;
-        audioElementRef.current.volume = VOICE_AI_CONSTANTS.AUDIO_VOLUME;
-        audioElementRef.current.play().catch(() => {
-          // Audio playback failed, but we don't need to handle this error
+        audioElementRef.current.volume = 1.0;
+        audioElementRef.current.play().catch((err) => {
+          console.warn("Autoplay may be blocked by browser:", err);
         });
+        console.log("🔊 Audio unmuted and playing");
       } else {
         // Mute and pause to avoid brief audio blips before pause takes effect.
         audioElementRef.current.muted = true;
         audioElementRef.current.pause();
+        console.log("🔇 Audio muted and paused");
       }
     }
 
@@ -260,6 +375,8 @@ const VoiceAIContent = () => {
   // Cleanup on component unmount
   useEffect(() => {
     return () => {
+      console.log("🧹 Component unmounting, cleaning up...");
+      
       // Stop recording
       stopRecording();
       
@@ -271,12 +388,13 @@ const VoiceAIContent = () => {
       }
       
       if (sessionStatus === "CONNECTED") {
-        disconnect().catch(() => {
-          // Disconnect failed, but we don't need to handle this error
+        console.log("🧹 CLEANUP - Disconnecting session on component unmount");
+        disconnect().catch(error => {
+          console.error('Error during cleanup disconnect:', error);
         });
       }
     };
-  }, [disconnect, microphoneStream, sessionStatus, stopRecording]);
+  }, []); // Empty dependency array - only run on unmount
 
   return (
     <section id="voice-ai" className="py-20 bg-gradient-primary dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 relative overflow-hidden">

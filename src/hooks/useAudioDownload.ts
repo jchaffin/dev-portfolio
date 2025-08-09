@@ -72,7 +72,9 @@ function useAudioDownload() {
 
     // Clean up the microphone stream
     if (micStreamRef.current) {
+      console.log("🎤 Cleaning up microphone stream from useAudioDownload");
       micStreamRef.current.getTracks().forEach(track => {
+        console.log("Stopping microphone track from useAudioDownload:", track.kind, track.id);
         track.stop();
         track.enabled = false;
       });

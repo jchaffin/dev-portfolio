@@ -49,28 +49,36 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   const historyHandlers = useHandleSessionHistory().current;
 
   const handleTransportEvent = useCallback((event: TransportEvent) => {
+    console.log("🚀 Transport event received:", event.type, event);
+    
     // Handle additional server events that aren't managed by the session
     switch (event.type) {
       case "conversation.item.input_audio_transcription.completed": {
+        console.log("🎤 Transcription completed:", event);
         historyHandlers.handleTranscriptionCompleted(event as any);
         break;
       }
       case "response.audio_transcript.done": {
+        console.log("🎵 Response transcript done:", event);
         historyHandlers.handleTranscriptionCompleted(event as any);
         break;
       }
       case "response.audio_transcript.delta": {
+        console.log("🎵 Response transcript delta:", event);
         historyHandlers.handleTranscriptionDelta(event as any);
         break;
       }
       case "conversation.item.input_audio_transcription.delta": {
+        console.log("🎤 Input transcription delta:", event);
         historyHandlers.handleTranscriptionDelta(event as any);
         break;
       }
       case "response.audio": {
+        console.log("🎵 Audio response received:", event);
         break;
       }
       case "response.audio.done": {
+        console.log("🎵 Audio response completed:", event);
         break;
       }
       default: {
@@ -104,6 +112,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     if (sessionRef.current) {
       // Log server errors
       sessionRef.current.on("error", (...args: unknown[]) => {
+        console.error("❌ Session error:", args[0]);
         logServerEvent({
           type: "error",
           message: args[0],
@@ -165,7 +174,9 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         context: extraContext ?? {},
       });
 
+      console.log("🔗 Connecting session with API key...");
       await sessionRef.current.connect({ apiKey: ek });
+      console.log("✅ Session connected successfully");
       setConnectionStatus('CONNECTED');
     },
     [setConnectionStatus, applyCodec],
