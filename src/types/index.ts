@@ -82,3 +82,49 @@ export interface PaginatedResponse<T> {
   hasPrev: boolean
 }
 
+// Voice AI Types
+export interface PortfolioContext {
+  experiences: Experience[];
+  projects: Project[];
+  skills: Skill[];
+  summary: string;
+  resume: {
+    workExperience: Experience[];
+    technicalSkills: Skill[];
+    projects: Project[];
+    summary: string;
+  };
+  completeResume: {
+    summary: string;
+    skills: Skill[];
+    experience: Experience[];
+    education: Education[];
+    contact: any;
+  };
+}
+
+export interface VoiceAIState {
+  sessionStatus: "DISCONNECTED" | "CONNECTING" | "CONNECTED";
+  userText: string;
+  microphoneStream: MediaStream | null;
+  isAudioPlaybackEnabled: boolean;
+}
+
+export interface VoiceAIActions {
+  connectToRealtime: () => Promise<void>;
+  disconnectFromRealtime: () => Promise<void>;
+  handleSendTextMessage: () => void;
+  setUserText: (text: string) => void;
+  toggleAudioPlayback: () => void;
+}
+
+export interface MessageItem {
+  itemId: string;
+  type: "MESSAGE" | "BREADCRUMB";
+  role: "user" | "assistant";
+  title: string;
+  timestamp: string;
+  isHidden: boolean;
+  createdAtMs: number;
+}
+

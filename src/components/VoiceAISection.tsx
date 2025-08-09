@@ -3,29 +3,26 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { useSearchParams } from "next/navigation";
-import { Activity, FileText, Volume2, Code, Send } from 'lucide-react'
+import { Activity, FileText, Volume2, Send } from 'lucide-react'
 import { experiences, projects, skills } from '@/data/portfolio'
 import resumeData from '@/data/sample-resume.json'
-import { v4 as uuidv4 } from "uuid";
 import ReactMarkdown from "react-markdown";
 
 // Types
-import { SessionStatus } from "@/types";
-import type { RealtimeAgent } from '@openai/agents/realtime';
+import { SessionStatus, PortfolioContext, VoiceAIState, VoiceAIActions, MessageItem } from "@/types";
+import { VOICE_AI_CONSTANTS, SESSION_STATUS } from "@/lib/constants";
 
 import { useEvent, EventProvider } from "@/contexts/EventContext";
 import { useTranscript, TranscriptProvider } from '@/contexts/TranscriptContext'
-import Events from "@/components/Events";
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 
 // Agent configs
 import { meAgent } from "@/app/agentConfigs/MeAgent";
-import { allAgentSets, defaultAgentSetKey } from "@/app/agentConfigs";
-import { createModerationGuardrail } from "@/app/agentConfigs/guardrails";
 
 import useAudioDownload from "@/hooks/useAudioDownload";
 import { useHandleSessionHistory } from "@/hooks/useHandleSessionHistory";
 
+// Voice AI Section
 const VoiceAISection = () => {
   return (
     <EventProvider>
@@ -41,28 +38,28 @@ const VoiceAIContent = () => {
   const [userText, setUserText] = useState<string>('')
 
   // Portfolio data for context
-  const portfolioContext = {
-    experiences,
-    projects: projects.filter(p => p.featured),
-    skills: skills.slice(0, 8), // Top skills
+  const portfolioContext: PortfolioContext = {
+    experiences: experiences as any,
+    projects: projects.filter(p => p.featured) as any,
+    skills: skills.slice(0, VOICE_AI_CONSTANTS.TOP_SKILLS_COUNT) as any, // Top skills
     summary: "Dynamic Voice AI Engineer with 5+ years of experience specializing in real-time voice AI infrastructure and conversational technologies.",
     resume: {
-      workExperience: experiences,
-      technicalSkills: skills,
-      projects: projects,
+      workExperience: experiences as any,
+      technicalSkills: skills as any,
+      projects: projects as any,
       summary: "Open to opportunities in realtime voice AI, MCP and AG-UI protocol implementations, and agentic systems."
     },
     // Complete resume data
     completeResume: {
       summary: resumeData.summary,
-      skills: resumeData.skills,
-      experience: resumeData.experience,
-      education: resumeData.education,
+      skills: resumeData.skills as any,
+      experience: resumeData.experience as any,
+      education: resumeData.education as any,
       contact: resumeData.contact,
     }
   }
   const searchParams = useSearchParams()!;
-  const urlCodec = searchParams.get("codec") || "opus";
+  const urlCodec = searchParams.get("codec") || VOICE_AI_CONSTANTS.DEFAULT_CODEC;
   
   const { loggedEvents } = useEvent();
   const { transcriptItems, addTranscriptBreadcrumb, clearTranscript } = useTranscript();
@@ -74,7 +71,7 @@ const VoiceAIContent = () => {
     const el = document.createElement('audio');
     el.autoplay = true;
     el.style.display = 'none';
-    el.volume = 1.0; // Ensure volume is set
+    el.volume = VOICE_AI_CONSTANTS.AUDIO_VOLUME; // Ensure volume is set
     document.body.appendChild(el);
     console.log("🎵 Audio element created:", el);
     return el;
@@ -83,70 +80,19 @@ const VoiceAIContent = () => {
   const [sessionStatus, setSessionStatus] =
     useState<SessionStatus>("DISCONNECTED");
 
-  const [selectedAgentName, setSelectedAgentName] = useState<string>("");
-  const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<
-    RealtimeAgent[] | null
-  >(null);
   const [microphoneStream, setMicrophoneStream] = useState<MediaStream | null>(null);
-
-  // Attach SDK audio element once it exists (after first render in browser)
-  useEffect(() => {
-    if (sdkAudioElement && !audioElementRef.current) {
-      audioElementRef.current = sdkAudioElement;
-      console.log("🎵 Audio element attached to ref:", sdkAudioElement);
-      
-      // Add event listeners to debug audio
-      sdkAudioElement.addEventListener('loadedmetadata', () => {
-        console.log("🎵 Audio metadata loaded");
-      });
-      
-      sdkAudioElement.addEventListener('play', () => {
-        console.log("🎵 Audio started playing");
-      });
-      
-      sdkAudioElement.addEventListener('pause', () => {
-        console.log("🎵 Audio paused");
-      });
-      
-      sdkAudioElement.addEventListener('error', (e) => {
-        console.error("🎵 Audio error:", e);
-      });
-    }
-  }, [sdkAudioElement]);
 
   // Initialize agent selection from URL parameters
   useEffect(() => {
-    let finalAgentConfig = searchParams.get("agentConfig") || defaultAgentSetKey;
-    
-    // Debug logging
-    console.log("Available agent sets:", Object.keys(allAgentSets));
-    console.log("Requested agent config:", finalAgentConfig);
-    console.log("Agent exists check:", finalAgentConfig && allAgentSets[finalAgentConfig]);
-    console.log("All agent sets content:", allAgentSets);
-    
-    if (!allAgentSets[finalAgentConfig]) {
-      console.log("Agent not found, using default:", defaultAgentSetKey);
-      finalAgentConfig = defaultAgentSetKey;
-    }
-    
-    console.log("Final agent config:", finalAgentConfig);
-    console.log("Selected agent set:", allAgentSets[finalAgentConfig]);
-    
-    if (finalAgentConfig === 'meAgent') {
-      console.log("🎯 MEAGENT SELECTED - Portfolio assistant ready");
-      console.log("MeAgent config:", allAgentSets[finalAgentConfig]);
-    }
-    
-    setSelectedAgentConfigSet(allAgentSets[finalAgentConfig]);
-    setSelectedAgentName(finalAgentConfig);
-  }, [searchParams]);
+    console.log("🎯 MEAGENT SELECTED - Portfolio assistant ready");
+    console.log("MeAgent config:", meAgent);
+  }, []);
 
   const {
     connect,
     disconnect,
     sendUserText,
     sendEvent,
-    interrupt,
     mute,
   } = useRealtimeSession({
     onConnectionChange: (s) => {
@@ -155,10 +101,6 @@ const VoiceAIContent = () => {
     },
   });
 
-  const [isSuggestionsPaneExpanded, setIsSuggestionsPaneExpanded] =
-    useState<boolean>(true);
-  const [isLogsPopupVisible, setIsLogsPopupVisible] = useState<boolean>(false);
-  // Removed push-to-talk - using continuous listening
   const [isAudioPlaybackEnabled, setIsAudioPlaybackEnabled] = useState<boolean>(
     () => {
       if (typeof window === 'undefined') return true;
@@ -166,7 +108,7 @@ const VoiceAIContent = () => {
       return stored ? stored === 'true' : true;
     },
   );
-
+  
   const { startRecording, stopRecording, downloadRecording } =
     useAudioDownload();
   
@@ -180,6 +122,7 @@ const VoiceAIContent = () => {
 
   useHandleSessionHistory();
 
+  // Fetch ephemeral key for realtime session
   const fetchEphemeralKey = async (): Promise<string | null> => {
     const tokenResponse = await fetch("/api/session");
     const data = await tokenResponse.json();
@@ -193,19 +136,13 @@ const VoiceAIContent = () => {
     return data.client_secret.value;
   };
 
-
-
+  // Connect to realtime session
   const connectToRealtime = async () => {
-    const agentSetKey = searchParams.get("agentConfig") || defaultAgentSetKey;
-    console.log("🚀 CONNECT ATTEMPT - Agent config:", agentSetKey);
+    console.log("🚀 CONNECT ATTEMPT - Agent config: meAgent");
     console.log("Current sessionStatus:", sessionStatus);
     
-    // Get the agent directly from allAgentSets if selectedAgentConfigSet is not set
-    const agentConfigSet = selectedAgentConfigSet || allAgentSets[agentSetKey] || null;
-    console.log("Agent config set to use:", agentConfigSet);
-    
-    if (!agentConfigSet || sessionStatus !== "DISCONNECTED") {
-      console.log("❌ CONNECTION BLOCKED - Agent config set:", !!agentConfigSet, "Session status:", sessionStatus);
+    if (sessionStatus !== "DISCONNECTED") {
+      console.log("❌ CONNECTION BLOCKED - Session status:", sessionStatus);
       return;
     }
     console.log("Setting status to CONNECTING");
@@ -220,13 +157,12 @@ const VoiceAIContent = () => {
       }
       console.log("Ephemeral key received successfully");
 
-      console.log("🤖 CONNECTING - Agent config set:", agentConfigSet);
-      console.log("🤖 AGENT NAMES:", agentConfigSet?.map(agent => agent.name));
+      console.log("🤖 CONNECTING - Agent config set: meAgent");
       console.log("🎵 Audio element for connection:", sdkAudioElement);
       
       await connect({
         getEphemeralKey: async () => EPHEMERAL_KEY,
-        initialAgents: agentConfigSet,
+        initialAgents: [meAgent],
         audioElement: sdkAudioElement,
         outputGuardrails: [], // Temporarily disable guardrails
         extraContext: {
@@ -240,7 +176,7 @@ const VoiceAIContent = () => {
       setTimeout(() => {
         console.log("🎤 Triggering initial greeting");
         sendClientEvent({ type: "response.create" });
-      }, 1000);
+      }, VOICE_AI_CONSTANTS.INITIAL_GREETING_DELAY);
       
     } catch (err) {
       console.error("Error connecting via SDK:", err);
@@ -248,6 +184,7 @@ const VoiceAIContent = () => {
     }
   };
 
+  //  disconnect from realtime session
   const disconnectFromRealtime = async () => {
     console.log("🔌 Starting disconnect process...");
     
@@ -291,41 +228,7 @@ const VoiceAIContent = () => {
     }
   };
 
-  const sendSimulatedUserMessage = (text: string) => {
-    const id = uuidv4().slice(0, 32);
-
-    sendClientEvent({
-      type: 'conversation.item.create',
-      item: {
-        id,
-        type: 'message',
-        role: 'user',
-        content: [{ type: 'input_text', text }],
-      },
-    });
-    sendClientEvent({ type: 'response.create' }, '(simulated user text message)');
-  };
-
-  const updateSession = (shouldTriggerResponse: boolean = false) => {
-    // Use server-side voice activity detection for continuous listening
-    const turnDetection = { type: "server_vad" as const };
-
-    sendClientEvent({
-      type: "session.update",
-      session: {
-        turn_detection: turnDetection,
-        audio_playback: {
-          mode: isAudioPlaybackEnabled ? "enabled" : "disabled",
-        },
-      },
-    });
-
-    if (shouldTriggerResponse) {
-      sendClientEvent({ type: "response.create" });
-    }
-  };
-
-
+  // send text message to realtime session
   const handleSendTextMessage = () => {
     if (!userText.trim() || sessionStatus !== "CONNECTED") return;
     
@@ -354,7 +257,7 @@ const VoiceAIContent = () => {
         // Ensure audio element is ready for autoplay
         if (sdkAudioElement) {
           sdkAudioElement.muted = false;
-          sdkAudioElement.volume = 1.0;
+          sdkAudioElement.volume = VOICE_AI_CONSTANTS.AUDIO_VOLUME;
           console.log("🎵 Audio element prepared for autoplay");
         }
         
@@ -366,18 +269,7 @@ const VoiceAIContent = () => {
     }
   };
 
-  const handleCodecChange = (newCodec: string) => {
-    const url = new URL(window.location.toString());
-    url.searchParams.set("codec", newCodec);
-    window.location.replace(url.toString());
-  };
-
   useEffect(() => {
-    // Removed push-to-talk storage - using continuous listening
-    const storedLogsExpanded = localStorage.getItem("logsExpanded");
-    if (storedLogsExpanded) {
-      setIsSuggestionsPaneExpanded(storedLogsExpanded === "true");
-    }
     const storedAudioPlaybackEnabled = localStorage.getItem(
       "audioPlaybackEnabled"
     );
@@ -385,12 +277,6 @@ const VoiceAIContent = () => {
       setIsAudioPlaybackEnabled(storedAudioPlaybackEnabled === "true");
     }
   }, []);
-
-  // Removed push-to-talk localStorage - using continuous listening
-
-  useEffect(() => {
-    localStorage.setItem("logsExpanded", isSuggestionsPaneExpanded.toString());
-  }, [isSuggestionsPaneExpanded]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -404,7 +290,7 @@ const VoiceAIContent = () => {
       console.log("🔊 Audio playback setting:", isAudioPlaybackEnabled);
       if (isAudioPlaybackEnabled) {
         audioElementRef.current.muted = false;
-        audioElementRef.current.volume = 1.0;
+        audioElementRef.current.volume = VOICE_AI_CONSTANTS.AUDIO_VOLUME;
         audioElementRef.current.play().catch((err) => {
           console.warn("Autoplay may be blocked by browser:", err);
         });
@@ -552,7 +438,6 @@ const VoiceAIContent = () => {
                 </div>
               </div>
             </div>
-
             {/* Messages */}
             <div className="h-96 overflow-y-auto p-6">
               <div className="flex flex-col gap-y-4">
@@ -587,7 +472,6 @@ const VoiceAIContent = () => {
                   })}
               </div>
             </div>
-
             {/* Controls */}
             <div className="p-6 border-t border-theme-primary/20 bg-transparent backdrop-blur-xl">
               {/* Text Input */}
@@ -616,7 +500,6 @@ const VoiceAIContent = () => {
             </div>
           </div>
         </motion.div>
-
         {/* Features Grid */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}

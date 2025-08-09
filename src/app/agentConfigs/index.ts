@@ -1,6 +1,3 @@
-import { simpleHandoffScenario } from './simpleHandoff';
-import { customerServiceRetailScenario } from './customerServiceRetail';
-import { chatSupervisorScenario } from './chatSupervisor';
 import { meAgent } from './MeAgent';
 import { 
   interviewerScenario, 

@@ -3,42 +3,19 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { Github, ExternalLink } from 'lucide-react'
-import { getRecentGitHubProjects, Project } from '@/lib/getRecentGitHubProjects'
-
-const localProjects: Project[] = [
-  {
-    title: 'Real-time Chat Application',
-    description: 'WebSocket-based chat app with rooms, file sharing, and message encryption.',
-    tech: ['React', 'Socket.io', 'Express', 'MongoDB', 'JWT'],
-    github: 'https://github.com/jchaffin/chat-app',
-    live: 'https://chat-app-demo.vercel.app',
-  },
-  {
-    title: 'Task Management API',
-    description: 'RESTful API with authentication, CRUD operations, and comprehensive testing.',
-    tech: ['Node.js', 'Express', 'PostgreSQL', 'Jest', 'Swagger'],
-    github: 'https://github.com/jchaffin/task-api',
-    live: 'https://task-api-docs.vercel.app',
-  },
-  {
-    title: 'Weather Dashboard',
-    description: 'Dynamic weather app with location services, forecasts, and data visualization.',
-    tech: ['React', 'Chart.js', 'OpenWeather API', 'Geolocation'],
-    github: 'https://github.com/jchaffin/weather-dashboard',
-    live: 'https://weather-dashboard-demo.vercel.app',
-  }
-]
+import { getProjects, Project } from '@/lib/getProjects'
+import { LOCAL_PROJECTS } from '@/lib/constants'
 
 export default function ProjectsSection() {
   const [projects, setProjects] = useState<Project[] | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    getRecentGitHubProjects().then((githubProjects) => {
+    getProjects().then((githubProjects) => {
       let merged: Project[] = githubProjects.slice(0, 5);
       if (merged.length < 5) {
         const existingTitles = new Set(merged.map((p: Project) => p.title));
-        for (const local of localProjects) {
+        for (const local of LOCAL_PROJECTS) {
           if (merged.length >= 5) break;
           if (!existingTitles.has(local.title)) {
             merged.push(local);
@@ -82,6 +59,9 @@ export default function ProjectsSection() {
   )
 }
 
+/* ProjectCard
+ This component is responsible for displaying a single project card.
+ It is used to display a single project card in the projects section. */
 const ProjectCard = ({ project, index }: { project: Project, index: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 50 }}

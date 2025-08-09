@@ -24,7 +24,7 @@ const AboutSection = () => {
     {
       icon: <AudioLines className="h-8 w-8" />,
       title: "Voice AI",
-      description: "STS, SAMBA-ASR, Tone Injection"
+      description: "STS, SAMBA-ASR, Prosody.ai"
     },
     {
       icon: <ChartBar className="h-8 w-8" />,
@@ -33,8 +33,8 @@ const AboutSection = () => {
     },
     {
       icon: <Banknote className="h-8 w-8" />,
-      title: "Finance",
-      description: "Fianancial Modeling, Portfolio Management, Risk Analysis"
+      title: "Other Interests",
+      description: "MCP, AG2AG, AG-UI, Finnancial Modeling"
     }
   ]
 
@@ -52,7 +52,9 @@ const AboutSection = () => {
             About Me
           </h2>
           <p className="text-lg max-w-3xl mx-auto text-theme-secondary">
-          Dynamic Voice AI Engineer with 5+ years of experience specializing in real-time voice AI infrastructure and conversational technologies. Expertise encompasses building advanced real-time voice AI systems and developing modular UI components that enhance user interaction. Proficient in leveraging technologies such as Node.js, Typescript, and Python to create efficient, latency-optimized solutions. Known for integrating complex APIs and modernizing analytics pipelines to drive insightful data-driven decisions. A proven track record in delivering innovative voice AI solutions that elevate user experience and operational efficiency.
+          Full-Stack Engineer with 5+ years of experience in Python, Node.js, and conversational AI.
+          Focused on building low-latency infrastructure, modular applications, and
+          orchestration pipelines that connect ASR, NLP, and TTS components.
           </p>
         </motion.div>
 

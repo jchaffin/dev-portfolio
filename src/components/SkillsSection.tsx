@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
-import { skills as portfolioSkills, projects, experiences } from '@/data/portfolio'
+import { skills as portfolioSkills, projects } from '@/data/portfolio'
 import { Skill } from '@/types'
 import resumeData from '@/data/sample-resume.json'
-import { getRecentGitHubProjects } from '@/lib/getRecentGitHubProjects'
+import { getProjects } from '@/lib/getProjects'
 
 // Calculate skill level based on frequency in projects and resume
 const calculateSkillLevel = (skillName: string): number => {
@@ -56,7 +56,6 @@ const calculateSkillLevel = (skillName: string): number => {
   
   return Math.round(percentage);
 };
-
 
 // Get dynamic skills with calculated levels and calculation data
 const getDynamicSkills = (githubProjects: any[] = []): Skill[] => {
@@ -251,7 +250,7 @@ const SkillsSection = () => {
     const loadSkills = async () => {
       try {
         // Fetch GitHub projects first
-        const githubProjects = await getRecentGitHubProjects();
+        const githubProjects = await getProjects();
         const initialSkills = getDynamicSkills(githubProjects);
         
         // Call the semantic categorization API
