@@ -9,8 +9,8 @@ const inter = Inter({
 })
 
 export const metadata = {
-  title: 'Fullstack AI Engineer',
-  description: 'Jacob Chaffin - Software Engineer | Voice AI',
+  title: 'Portfolio',
+  description: 'Fullstack Engineer | Voice AI',
 }
 
 export default function RootLayout({

@@ -498,7 +498,6 @@ const VoiceAIContent = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-3 h-3 rounded-full ${sessionStatus === 'CONNECTED' ? 'bg-accent-success' : 'bg-accent-error'} animate-pulse`}></div>
-                  <h3 className="text-xl font-semibold text-theme-primary">Jacob&apos;s AI Assistant</h3>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
