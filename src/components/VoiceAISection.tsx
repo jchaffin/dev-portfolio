@@ -56,7 +56,7 @@ const VoiceAIContent = () => {
       contact: resumeData.contact,
     }
   }
-  const { transcriptItems } = useTranscript();
+  const { transcriptItems, clearTranscript } = useTranscript();
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
@@ -111,6 +111,7 @@ const VoiceAIContent = () => {
     disconnect,
     sendUserText,
     mute,
+    sendEvent,
   } = useRealtimeSession({
     onConnectionChange: (s) => {
       console.log("🔄 Session status changed:", s);
@@ -126,8 +127,7 @@ const VoiceAIContent = () => {
     },
   );
 
-  const { startRecording, stopRecording, downloadRecording } =
-    useAudioDownload();
+  const { startRecording, stopRecording } = useAudioDownload();
   
   const sendClientEvent = (eventObj: any, eventNameSuffix = "") => {
     try {
@@ -136,8 +136,6 @@ const VoiceAIContent = () => {
       console.error('Failed to send via SDK', err);
     }
   };
-
-  const { startRecording, stopRecording } = useAudioDownload();
 
   const fetchEphemeralKey = async (): Promise<string | null> => {
     try {
@@ -163,6 +161,8 @@ const VoiceAIContent = () => {
     }
 
     try {
+      // Clear previous transcript on fresh connect
+      clearTranscript();
       console.log("Fetching ephemeral key...");
       const ephemeralKey = await fetchEphemeralKey();
       if (!ephemeralKey) {
@@ -172,8 +172,12 @@ const VoiceAIContent = () => {
       console.log("Ephemeral key received successfully");
 
       const sdkAudioElement = audioElementRef.current;
-      console.log("🤖 AGENT NAMES:", agentConfigSet?.map(agent => agent.name));
+      console.log("🤖 AGENT NAMES:", [meAgent.name]);
       console.log("🎵 Audio element for connection:", sdkAudioElement);
+      
+      if (!sdkAudioElement) {
+        throw new Error("Audio element not available");
+      }
       
       await connect({
         getEphemeralKey: () => Promise.resolve(ephemeralKey),
@@ -225,6 +229,24 @@ const VoiceAIContent = () => {
     } catch (error) {
       console.error("Error stopping recording:", error);
     }
+
+    // Immediately clear any audio element streams
+    try {
+      if (audioElementRef.current) {
+        const src = audioElementRef.current.srcObject as MediaStream | null;
+        audioElementRef.current.srcObject = null;
+        if (src) {
+          src.getTracks().forEach((t) => { try { t.stop(); } catch { /* no-op */ } });
+        }
+        try { audioElementRef.current.pause(); } catch { /* no-op */ }
+      }
+    } catch { /* no-op */ }
+
+    // Force-release microphone by acquiring and immediately stopping a fresh stream
+    try {
+      const tmp = await navigator.mediaDevices.getUserMedia({ audio: true });
+      tmp.getTracks().forEach((t) => { try { t.stop(); } catch { /* no-op */ } });
+    } catch { /* ignore */ }
     
     // Disconnect from the realtime session
     try {
@@ -234,13 +256,12 @@ const VoiceAIContent = () => {
       console.error('Error disconnecting from realtime session:', error);
     } finally {
       setSessionStatus("DISCONNECTED");
-      clearTranscript();
       console.log("🧹 Disconnect process completed");
     }
   };
 
   const sendSimulatedUserMessage = (text: string) => {
-    const id = uuidv4().slice(0, 32);
+    const id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
     sendClientEvent({
       type: 'conversation.item.create',
@@ -287,23 +308,14 @@ const VoiceAIContent = () => {
     if (sessionStatus === "CONNECTED") {
       await disconnectFromRealtime();
     } else {
-      
-      // Request microphone permission first
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        setMicrophoneStream(stream); // Store the stream for later cleanup
-        
-        // Ensure audio element is ready for autoplay
-        if (sdkAudioElement) {
-          sdkAudioElement.muted = false;
-          sdkAudioElement.volume = 1.0;
-          console.log("🎵 Audio element prepared for autoplay");
-        }
-        
-        connectToRealtime();
-      } catch {
-        alert("Microphone permission is required for voice interaction. Please allow microphone access and try again.");
+      // Ensure audio element is ready for autoplay; SDK will request mic
+      if (sdkAudioElement) {
+        sdkAudioElement.muted = false;
+        sdkAudioElement.volume = 1.0;
+        console.log("🎵 Audio element prepared for autoplay");
       }
+
+      connectToRealtime();
     }
   };
 
@@ -368,8 +380,37 @@ const VoiceAIContent = () => {
     // Only stop recording when session is disconnecting
     if (sessionStatus === "DISCONNECTED") {
       stopRecording();
+      // Ensure microphone stream is fully released on any disconnect path
+      if (microphoneStream) {
+        try {
+          microphoneStream.getTracks().forEach((track) => {
+            track.stop();
+            track.enabled = false;
+          });
+        } catch {
+          // no-op
+        } finally {
+          setMicrophoneStream(null);
+        }
+      }
+
+      // Also clear any srcObject on the audio element
+      if (audioElementRef.current) {
+        try {
+          const src = audioElementRef.current.srcObject as MediaStream | null;
+          audioElementRef.current.srcObject = null;
+          if (src) {
+            src.getTracks().forEach((t) => {
+              try { t.stop(); } catch { /* no-op */ }
+            });
+          }
+        } catch { /* no-op */ }
+        try { audioElementRef.current.pause(); } catch { /* no-op */ }
+      }
+
+      // Final fallback removed to avoid re-acquiring the mic in effects
     }
-  }, [sessionStatus, startRecording, stopRecording]);
+  }, [sessionStatus, startRecording, stopRecording, microphoneStream]);
 
   
   // Cleanup on component unmount

@@ -6,8 +6,6 @@ function useAudioDownload() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   // Ref to collect all recorded Blob chunks.
   const recordedChunksRef = useRef<Blob[]>([]);
-  // Ref to store the microphone stream for cleanup.
-  const micStreamRef = useRef<MediaStream | null>(null);
 
   /**
    * Starts recording by combining the provided remote stream with
@@ -15,43 +13,19 @@ function useAudioDownload() {
    * @param remoteStream - The remote MediaStream (e.g., from the audio element).
    */
   const startRecording = async (remoteStream: MediaStream) => {
-    let micStream: MediaStream;
-    try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      micStreamRef.current = micStream; // Store for cleanup
-    } catch (err) {
-      throw err;
-    }
-
-    // Create an AudioContext to merge the streams.
-    const audioContext = new AudioContext();
-    const destination = audioContext.createMediaStreamDestination();
-
-    // Connect the remote audio stream.
-    try {
-      const remoteSource = audioContext.createMediaStreamSource(remoteStream);
-      remoteSource.connect(destination);
-    } catch (err) {
-      throw err;
-    }
-
-    // Connect the microphone audio stream.
-    try {
-      const micSource = audioContext.createMediaStreamSource(micStream);
-      micSource.connect(destination);
-    } catch (err) {
-      throw err;
+    // Avoid starting multiple recorders simultaneously
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      return;
     }
 
     const options = { mimeType: "audio/webm" };
     try {
-      const mediaRecorder = new MediaRecorder(destination.stream, options);
+      const mediaRecorder = new MediaRecorder(remoteStream, options);
       mediaRecorder.ondataavailable = (event: BlobEvent) => {
         if (event.data && event.data.size > 0) {
           recordedChunksRef.current.push(event.data);
         }
       };
-      // Start recording without a timeslice.
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
     } catch (err) {
@@ -64,21 +38,9 @@ function useAudioDownload() {
    */
   const stopRecording = () => {
     if (mediaRecorderRef.current) {
-      // Request any final data before stopping.
-      mediaRecorderRef.current.requestData();
-      mediaRecorderRef.current.stop();
+      try { mediaRecorderRef.current.requestData(); } catch {}
+      try { mediaRecorderRef.current.stop(); } catch {}
       mediaRecorderRef.current = null;
-    }
-
-    // Clean up the microphone stream
-    if (micStreamRef.current) {
-      console.log("🎤 Cleaning up microphone stream from useAudioDownload");
-      micStreamRef.current.getTracks().forEach(track => {
-        console.log("Stopping microphone track from useAudioDownload:", track.kind, track.id);
-        track.stop();
-        track.enabled = false;
-      });
-      micStreamRef.current = null;
     }
   };
 

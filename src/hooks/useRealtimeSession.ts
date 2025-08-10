@@ -11,8 +11,8 @@ import { useHandleSessionHistory } from './useHandleSessionHistory';
 import { SessionStatus } from '@/types';
 
 export interface RealtimeSessionCallbacks {
-  onConnectionChange?: (_status: SessionStatus, _agentName?: string) => void;
-  onAgentHandoff?: (_agentName: string) => void;
+  onConnectionChange?: (status: SessionStatus) => void;
+  onAgentHandoff?: (agentName: string) => void;
 }
 
 export interface ConnectOptions {
@@ -23,11 +23,6 @@ export interface ConnectOptions {
   outputGuardrails?: any[];
 }
 
-interface TransportEvent {
-  type: string;
-  [key: string]: unknown;
-}
-
 export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   const sessionRef = useRef<RealtimeSession | null>(null);
   const [status, setStatus] = useState<
@@ -35,42 +30,42 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   >('DISCONNECTED');
   const { logClientEvent } = useEvent();
 
-  const setConnectionStatus = useCallback(
+  const updateStatus = useCallback(
     (s: SessionStatus) => {
       setStatus(s);
       callbacks.onConnectionChange?.(s);
       logClientEvent({}, s);
     },
-    [callbacks, logClientEvent],
+    [callbacks],
   );
 
   const { logServerEvent } = useEvent();
 
   const historyHandlers = useHandleSessionHistory().current;
 
-  const handleTransportEvent = useCallback((event: TransportEvent) => {
+  function handleTransportEvent(event: any) {
     console.log("🚀 Transport event received:", event.type, event);
     
     // Handle additional server events that aren't managed by the session
     switch (event.type) {
       case "conversation.item.input_audio_transcription.completed": {
         console.log("🎤 Transcription completed:", event);
-        historyHandlers.handleTranscriptionCompleted(event as any);
+        historyHandlers.handleTranscriptionCompleted(event);
         break;
       }
       case "response.audio_transcript.done": {
         console.log("🎵 Response transcript done:", event);
-        historyHandlers.handleTranscriptionCompleted(event as any);
+        historyHandlers.handleTranscriptionCompleted(event);
         break;
       }
       case "response.audio_transcript.delta": {
         console.log("🎵 Response transcript delta:", event);
-        historyHandlers.handleTranscriptionDelta(event as any);
+        historyHandlers.handleTranscriptionDelta(event);
         break;
       }
       case "conversation.item.input_audio_transcription.delta": {
         console.log("🎤 Input transcription delta:", event);
-        historyHandlers.handleTranscriptionDelta(event as any);
+        historyHandlers.handleTranscriptionDelta(event);
         break;
       }
       case "response.audio": {
@@ -86,7 +81,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         break;
       } 
     }
-  }, [historyHandlers, logServerEvent]);
+  }
 
   const codecParamRef = useRef<string>(
     (typeof window !== 'undefined'
@@ -98,20 +93,20 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   // Wrapper to pass current codec param
   const applyCodec = useCallback(
     (pc: RTCPeerConnection) => applyCodecPreferences(pc, codecParamRef.current),
-    [codecParamRef],
+    [],
   );
 
-  const handleAgentHandoff = useCallback((item: any) => {
-    const history = item.context?.history || [];
+  const handleAgentHandoff = (item: any) => {
+    const history = item.context.history;
     const lastMessage = history[history.length - 1];
-    const _agentName = lastMessage?.name?.split("transfer_to_")[1] || '';
-    callbacks.onAgentHandoff?.(_agentName);
-  }, [callbacks]);
+    const agentName = lastMessage.name.split("transfer_to_")[1];
+    callbacks.onAgentHandoff?.(agentName);
+  };
 
   useEffect(() => {
     if (sessionRef.current) {
       // Log server errors
-      sessionRef.current.on("error", (...args: unknown[]) => {
+      sessionRef.current.on("error", (...args: any[]) => {
         console.error("❌ Session error:", args[0]);
         logServerEvent({
           type: "error",
@@ -120,17 +115,17 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       });
 
       // history events
-      sessionRef.current.on("agent_handoff", handleAgentHandoff as any);
-      sessionRef.current.on("agent_tool_start", historyHandlers.handleAgentToolStart as any);
-      sessionRef.current.on("agent_tool_end", historyHandlers.handleAgentToolEnd as any);
-      sessionRef.current.on("history_updated", historyHandlers.handleHistoryUpdated as any);
-      sessionRef.current.on("history_added", historyHandlers.handleHistoryAdded as any);
-      sessionRef.current.on("guardrail_tripped", historyHandlers.handleGuardrailTripped as any);
+      sessionRef.current.on("agent_handoff", handleAgentHandoff);
+      sessionRef.current.on("agent_tool_start", historyHandlers.handleAgentToolStart);
+      sessionRef.current.on("agent_tool_end", historyHandlers.handleAgentToolEnd);
+      sessionRef.current.on("history_updated", historyHandlers.handleHistoryUpdated);
+      sessionRef.current.on("history_added", historyHandlers.handleHistoryAdded);
+      sessionRef.current.on("guardrail_tripped", historyHandlers.handleGuardrailTripped);
 
       // additional transport events
       sessionRef.current.on("transport_event", handleTransportEvent);
     }
-  }, [handleAgentHandoff, handleTransportEvent, historyHandlers, logServerEvent]);
+  }, [sessionRef.current]);
 
   const connect = useCallback(
     async ({
@@ -142,7 +137,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     }: ConnectOptions) => {
       if (sessionRef.current) return; // already connected
 
-      setConnectionStatus('CONNECTING');
+      updateStatus('CONNECTING');
 
       const ek = await getEphemeralKey();
       const rootAgent = initialAgents[0];
@@ -177,25 +172,25 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       console.log("🔗 Connecting session with API key...");
       await sessionRef.current.connect({ apiKey: ek });
       console.log("✅ Session connected successfully");
-      setConnectionStatus('CONNECTED');
+      updateStatus('CONNECTED');
     },
-    [setConnectionStatus, applyCodec],
+    [callbacks, updateStatus],
   );
 
   const disconnect = useCallback(async () => {
     if (sessionRef.current) {
       try {
         await sessionRef.current.close();
-      } catch {
-        // Removed console.error
+      } catch (error) {
+        console.error('Error closing session:', error);
       } finally {
         sessionRef.current = null;
-        setConnectionStatus('DISCONNECTED');
+        updateStatus('DISCONNECTED');
       }
     } else {
-      setConnectionStatus('DISCONNECTED');
+      updateStatus('DISCONNECTED');
     }
-  }, [setConnectionStatus]);
+  }, [updateStatus]);
 
   const assertconnected = () => {
     if (!sessionRef.current) throw new Error('RealtimeSession not connected');
@@ -213,7 +208,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     sessionRef.current!.sendMessage(text);
   }, []);
 
-  const sendEvent = useCallback((ev: TransportEvent) => {
+  const sendEvent = useCallback((ev: any) => {
     sessionRef.current?.transport.sendEvent(ev);
   }, []);
 
@@ -223,13 +218,13 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
   const pushToTalkStart = useCallback(() => {
     if (!sessionRef.current) return;
-    sessionRef.current.transport.sendEvent({ type: 'input_audio_buffer.clear' } as TransportEvent);
+    sessionRef.current.transport.sendEvent({ type: 'input_audio_buffer.clear' } as any);
   }, []);
 
   const pushToTalkStop = useCallback(() => {
     if (!sessionRef.current) return;
-    sessionRef.current.transport.sendEvent({ type: 'input_audio_buffer.commit' } as TransportEvent);
-    sessionRef.current.transport.sendEvent({ type: 'response.create' } as TransportEvent);
+    sessionRef.current.transport.sendEvent({ type: 'input_audio_buffer.commit' } as any);
+    sessionRef.current.transport.sendEvent({ type: 'response.create' } as any);
   }, []);
   
 

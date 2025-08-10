@@ -44,14 +44,6 @@ export const TranscriptProvider: FC<PropsWithChildren> = ({ children }) => {
 
   const addTranscriptMessage: TranscriptContextValue["addTranscriptMessage"] = (itemId, role, text = "", isHidden = false) => {
     setTranscriptItems((prev) => {
-      const existingMessage = prev.find(
-        (log) => log.itemId === itemId && log.type === "MESSAGE"
-      );
-      if (existingMessage) {
-        // Skip if message already exists
-        return prev;
-      }
-
       const newItem: TranscriptItem = {
         itemId,
         type: "MESSAGE",
@@ -114,7 +106,6 @@ export const TranscriptProvider: FC<PropsWithChildren> = ({ children }) => {
       )
     );
   };
-
   const clearTranscript: TranscriptContextValue["clearTranscript"] = () => {
     setTranscriptItems([]);
   };
