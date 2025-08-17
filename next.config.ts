@@ -15,6 +15,32 @@ const nextConfig: NextConfig = {
     // Disable strict mode for more lenient builds
     forceSwcTransforms: false,
   },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: `
+              default-src 'self';
+              script-src 'self' 'unsafe-eval' 'unsafe-inline';
+              style-src 'self' 'unsafe-inline';
+              img-src 'self' data: blob:;
+              font-src 'self';
+              connect-src 'self' https://api.openai.com https://*.openai.com https://api.cloud.copilotkit.ai;
+              media-src 'self';
+              object-src 'none';
+              base-uri 'self';
+              form-action 'self';
+              frame-ancestors 'none';
+              upgrade-insecure-requests;
+            `.replace(/\s{2,}/g, ' ').trim()
+          }
+        ]
+      }
+    ];
+  },
 };
 
 export default nextConfig;

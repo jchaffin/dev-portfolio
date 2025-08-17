@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
+}
+
 interface Skill {
   name: string
   level: number
@@ -181,7 +192,8 @@ export async function POST(request: NextRequest) {
 
     // Categorize each broader skill group into the most similar domain
     const categorizedSkills = Object.entries(skillGroups).map(([broaderSkill, group]) => {
-      const averageLevel = Math.round(group.totalLevel / group.skills.length)
+      // Use the highest level in the group instead of averaging
+      const maxLevel = Math.max(...group.skills.map(s => s.level))
       
       // Find the most similar domain for this broader skill
       const broaderEmbedding = validBroaderEmbeddings.find(item => item?.skillName === broaderSkill)
@@ -208,7 +220,7 @@ export async function POST(request: NextRequest) {
       
       return {
         name: broaderSkill,
-        level: Math.min(95, Math.max(70, averageLevel)),
+        level: Math.min(95, Math.max(70, maxLevel)),
         category: bestCategory,
         subSkills: group.skills.map(s => s.name), // Keep track of original skills
         calculation: group.calculation

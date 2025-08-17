@@ -14,17 +14,17 @@ const AboutSection = () => {
     {
       icon: <Server className="h-8 w-8" />,
       title: "Backend Development",
-      description: "Node.js, MongoDB, Pinecone DB"
+      description: "Multi-Modal, NL2SQL, Heterogeneous Data"
     },
     {
       icon: <Database className="h-8 w-8" />,
       title: "DevOps & Cloud",
-      description: "AWS, Docker, CI/CD, Monitoring"
+      description: "AWS, Docker, GCP, Kubernetes"
     },
     {
       icon: <AudioLines className="h-8 w-8" />,
       title: "Voice AI",
-      description: "STS, SAMBA-ASR, Prosody.ai"
+      description: "STS, Mamba-SSM, Prosody.ai"
     },
     {
       icon: <ChartBar className="h-8 w-8" />,

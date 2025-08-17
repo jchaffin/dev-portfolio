@@ -1,5 +1,5 @@
 import './globals.css'
-import '@/lib/envSetup'
+import '@/lib/envConfig'
 import { Inter } from 'next/font/google'
 
 const inter = Inter({ 

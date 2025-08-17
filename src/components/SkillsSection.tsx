@@ -2,67 +2,17 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
-import { skills as portfolioSkills, projects } from '@/data/portfolio'
+import { skills as portfolioSkills } from '@/data/portfolio'
 import { Skill } from '@/types'
-import resumeData from '@/data/sample-resume.json'
+import resumeData from '@/data/resume.json'
 import { getProjects, type Project } from '@/lib/getProjects'
 
-// Calculate skill level based on frequency in projects and resume
-const calculateSkillLevel = (skillName: string): number => {
-  let frequency = 0;
-  let maxFrequency = 0;
-  
-  // Count frequency in projects
-  projects.forEach(project => {
-    const projectText = `${project.title} ${project.description} ${project.tech.join(' ')}`.toLowerCase();
-    const skillLower = skillName.toLowerCase();
-    
-    // Check for exact matches and partial matches
-    if (projectText.includes(skillLower)) {
-      frequency += 1;
-    }
-    
-    // Check tech array specifically (higher weight)
-    if (project.tech.some(tech => tech.toLowerCase().includes(skillLower))) {
-      frequency += 2;
-    }
-  });
-  
-  // Count frequency in resume experience
-  resumeData.experience?.forEach(exp => {
-    const expText = `${exp.role} ${exp.description} ${(exp.keywords || []).join(' ')}`.toLowerCase();
-    const skillLower = skillName.toLowerCase();
-    
-    if (expText.includes(skillLower)) {
-      frequency += 1;
-    }
-    
-    // Check keywords specifically (higher weight)
-    if (exp.keywords?.some(keyword => keyword.toLowerCase().includes(skillLower))) {
-      frequency += 2;
-    }
-  });
-  
-  // Count frequency in resume skills (highest weight)
-  if (resumeData.skills?.some(skill => skill.toLowerCase().includes(skillName.toLowerCase()))) {
-    frequency += 3;
-  }
-  
-  // Calculate max possible frequency for normalization
-  maxFrequency = (projects.length * 3) + (resumeData.experience?.length || 0) * 3 + 3;
-  
-  // Convert to percentage (70-95 range for realistic levels)
-  const percentage = Math.min(95, Math.max(70, 70 + (frequency / maxFrequency) * 25));
-  
-  return Math.round(percentage);
-};
+// Skill level calculation is now handled by getDynamicSkills() with GitHub projects
 
 // Get dynamic skills with calculated levels and calculation data
 const getDynamicSkills = (githubProjects: Project[] = []): Skill[] => {
   // Calculate levels for all skills first with calculation data
   const skillsWithLevels = portfolioSkills.map(skill => {
-    const level = calculateSkillLevel(skill.name)
-    
     // Calculate frequency data for the formula
     let frequency = 0
     let breakdown = {
@@ -116,6 +66,9 @@ const getDynamicSkills = (githubProjects: Project[] = []): Skill[] => {
     }
     
     const maxFrequency = (githubProjects.length * 3) + (resumeData.experience?.length || 0) * 3 + 3
+    
+    // Calculate level using the formula: 70 + (frequency / maxFrequency) * 25
+    const level = Math.min(95, Math.max(70, Math.round(70 + (frequency / Math.max(maxFrequency, 1)) * 25)))
     
     return {
       ...skill,

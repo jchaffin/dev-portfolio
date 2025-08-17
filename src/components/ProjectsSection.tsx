@@ -69,7 +69,7 @@ const ProjectCard = ({ project, index }: { project: Project, index: number }) =>
     transition={{ duration: 0.5, delay: index * 0.1 }}
     className="glass rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
   >
-    <div className="p-6">
+    <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-theme-primary">
           {project.title}
@@ -100,7 +100,7 @@ const ProjectCard = ({ project, index }: { project: Project, index: number }) =>
         {project.tech.map((tech: string, i: number) => (
           <span 
             key={i}
-            className="px-3 py-1 rounded-full text-sm bg-theme-primary text-theme-secondary"
+            className="px-3 py-1 rounded-full text-sm bg-theme-tertiary text-theme-secondary"
           >
             {tech}
           </span>

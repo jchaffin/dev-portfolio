@@ -2,9 +2,12 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 import { motion } from 'motion/react'
-import { Activity, FileText, Volume2, Send } from 'lucide-react'
-import { experiences, projects, skills } from '@/data/portfolio'
-import resumeData from '@/data/sample-resume.json'
+import { Activity, FileText, Volume2, Repeat, Filter } from 'lucide-react'
+import CalendlyModal from './CalendlyModal'
+// Removed CopilotKit imports - using voice agent only
+import { experiences, skills } from '@/data/portfolio'
+import { getProjects, type Project } from '@/lib/getProjects'
+import resumeData from '@/data/resume.json'
 import ReactMarkdown from "react-markdown";
 
 // Types
@@ -16,11 +19,39 @@ import { useTranscript, TranscriptProvider } from '@/contexts/TranscriptContext'
 import { useRealtimeSession } from "@/hooks/useRealtimeSession";
 
 // Agent configs
-import { meAgent } from "@/app/agentConfigs/MeAgent";
+import { meAgent } from "@/agents/MeAgent";
 
 import useAudioDownload from "@/hooks/useAudioDownload";
 
-// Voice AI Section
+// Error Boundary for CopilotKit
+class CopilotErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.warn('CopilotKit Error (non-critical):', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Render without CopilotKit if there's an error
+      return this.props.children;
+    }
+
+    return this.props.children;
+  }
+}
+
+// Voice AI Section - Using voice agent only
 const VoiceAISection = () => {
   return (
     <EventProvider>
@@ -32,20 +63,138 @@ const VoiceAISection = () => {
 }
 
 const VoiceAIContent = () => {
+  // Dynamic projects state
+  const [projects, setProjects] = useState<Project[]>([])
+  
+  // Copilot modals state
+  const [contactFormOpen, setContactFormOpen] = useState(false)
+  const [calendlyModalOpen, setCalendlyModalOpen] = useState(false)
+  const [contactFormData, setContactFormData] = useState<{subject?: string, context?: string}>({})
+  const [formSubmissionState, setFormSubmissionState] = useState<{
+    name: string,
+    email: string,
+    subject: string,
+    message: string,
+    isSubmitting: boolean,
+    submitStatus: 'idle' | 'success' | 'error'
+  }>({
+    name: '',
+    email: '',
+    subject: '',
+    message: '',
+    isSubmitting: false,
+    submitStatus: 'idle'
+  })
+  const [calendlyData, setCalendlyData] = useState<{url: string, details?: {type: string, duration: string}}>({url: ''})
 
-  const [userText, setUserText] = useState<string>('')
+  // Voice agent UI control handlers - triggered by agent tool responses
+  const handleAgentUIAction = (toolName: string, response: any) => {
+    console.log("🚀 Voice agent triggered UI action:", { toolName, response });
+    
+    if (toolName === 'send_email' && response.success && response.action === 'show_contact_form') {
+      setContactFormData({
+        subject: response.form_data?.subject || '',
+        context: response.form_data?.context || ''
+      });
+      setContactFormOpen(true);
+    } else if (toolName === 'set_meeting' && response.success && response.action === 'open_calendly') {
+      setCalendlyData({
+        url: response.calendly_url,
+        details: response.meeting_details
+      });
+      setCalendlyModalOpen(true);
+    }
+  };
 
-  // Portfolio data for context
+  // Handle contact form submission
+  const handleContactFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormSubmissionState(prev => ({ ...prev, isSubmitting: true }));
+    
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formSubmissionState.name,
+          email: formSubmissionState.email,
+          subject: formSubmissionState.subject,
+          message: formSubmissionState.message
+        })
+      });
+      
+      if (response.ok) {
+        setFormSubmissionState(prev => ({ 
+          ...prev, 
+          submitStatus: 'success',
+          isSubmitting: false 
+        }));
+        setTimeout(() => {
+          setContactFormOpen(false);
+          setFormSubmissionState({
+            name: '',
+            email: '',
+            subject: '',
+            message: '',
+            isSubmitting: false,
+            submitStatus: 'idle'
+          });
+        }, 2000);
+      } else {
+        setFormSubmissionState(prev => ({ 
+          ...prev, 
+          submitStatus: 'error',
+          isSubmitting: false 
+        }));
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      setFormSubmissionState(prev => ({ 
+        ...prev, 
+        submitStatus: 'error',
+        isSubmitting: false 
+      }));
+    }
+  };
+
+  const handleFormInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormSubmissionState(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  // Listen for voice agent tool responses
+  useEffect(() => {
+    const handleToolResponse = (event: any) => {
+      if (event.detail && event.detail.type === 'agent_tool_end') {
+        const { name, output } = event.detail;
+        if (name === 'send_email' || name === 'set_meeting') {
+          handleAgentUIAction(name, output);
+        }
+      }
+    };
+
+    window.addEventListener('agent-tool-response', handleToolResponse);
+    return () => window.removeEventListener('agent-tool-response', handleToolResponse);
+  }, []);
+
+  // Fetch dynamic projects
+  useEffect(() => {
+    getProjects().then(setProjects);
+  }, []);
+
+  // Portfolio data for context - fully dynamic from resume and GitHub
   const portfolioContext: PortfolioContext = {
     experiences: experiences as any,
-    projects: projects.filter(p => p.featured) as any,
-    skills: skills.slice(0, VOICE_AI_CONSTANTS.TOP_SKILLS_COUNT) as any, // Top skills
-    summary: "Dynamic Voice AI Engineer with 5+ years of experience specializing in real-time voice AI infrastructure and conversational technologies.",
+    projects: projects as any, // Dynamic projects from GitHub API
+    skills: skills.slice(0, VOICE_AI_CONSTANTS.TOP_SKILLS_COUNT) as any, // Dynamic skills from resume
+    summary: resumeData.summary, // Dynamic summary from resume
     resume: {
       workExperience: experiences as any,
       technicalSkills: skills as any,
       projects: projects as any,
-      summary: "Open to opportunities in realtime voice AI, MCP and AG-UI protocol implementations, and agentic systems."
+      summary: resumeData.summary // Dynamic summary from resume
     },
     // Complete resume data
     completeResume: {
@@ -101,6 +250,8 @@ const VoiceAIContent = () => {
     }
   }, [sdkAudioElement]);
 
+
+
   // Initialize agent selection from URL parameters
   useEffect(() => {
     // Agent selection initialization logic can be added here if needed
@@ -109,7 +260,6 @@ const VoiceAIContent = () => {
   const {
     connect,
     disconnect,
-    sendUserText,
     mute,
     sendEvent,
   } = useRealtimeSession({
@@ -196,7 +346,13 @@ const VoiceAIContent = () => {
         sendClientEvent({ type: "response.create" });
       }, 1000);
       
-    } catch {
+    } catch (error) {
+      console.error("❌ Connection failed:", error);
+      console.error("❌ Connection error details:", {
+        sessionStatus,
+        audioElement: sdkAudioElement ? "present" : "missing",
+        error
+      });
     }
   };
 
@@ -294,13 +450,6 @@ const VoiceAIContent = () => {
     }
   };
 
-  const handleSendTextMessage = () => {
-    if (!userText.trim() || sessionStatus !== "CONNECTED") return;
-    
-    // Send the text message using the SDK
-    sendUserText(userText.trim());
-    setUserText('');
-  };
 
   // Removed talk button functionality - using continuous listening instead
 
@@ -480,7 +629,7 @@ const VoiceAIContent = () => {
           Voice Agent
           </h2>
           <p className="text-xl text-secondary max-w-3xl mx-auto">
-            OpenAI Realtime API powered voice assistant with portfolio data access
+            Realtime Conversational AI.
           </p>
         </motion.div>
 
@@ -513,66 +662,217 @@ const VoiceAIContent = () => {
                 </div>
               </div>
             </div>
-            {/* Messages */}
+            {/* Voice Conversation Messages */}
             <div className="h-96 overflow-y-auto p-6">
               <div className="flex flex-col gap-y-4">
-                {transcriptItems
-                  .filter(item => item.type === "MESSAGE" && !item.isHidden)
-                  .sort((a, b) => a.createdAtMs - b.createdAtMs)
-                  .map((item) => {
-                    const isUser = item.role === "user";
-                    const title = item.title || "";
-                    const displayTitle = title.startsWith("[") && title.endsWith("]") 
-                      ? title.slice(1, -1) 
-                      : title;
+                {transcriptItems.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-theme-secondary">
+                    <div className="text-center">
+                      <p className="mb-2">🎤 Connect to start your voice conversation</p>
+                      <p className="text-sm">The AI can help you learn about Jacob's work and even open contact forms or schedule meetings!</p>
+                    </div>
+                  </div>
+                ) : (
+                  transcriptItems
+                    .filter(item => item.type === "MESSAGE" && !item.isHidden)
+                    .sort((a, b) => a.createdAtMs - b.createdAtMs)
+                    .map((item) => {
+                      const isUser = item.role === "user";
+                      const title = item.title || "";
+                      const displayTitle = title.startsWith("[") && title.endsWith("]") 
+                        ? title.slice(1, -1) 
+                        : title;
 
-                    return (
-                      <div key={item.itemId} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-lg p-3 rounded-xl ${
-                          isUser 
-                            ? "bg-accent-secondary text-white" 
-                            : "bg-theme-tertiary text-theme-primary"
-                        }`}>
-                          <div className={`text-xs font-mono mb-1 ${
-                            isUser ? "text-white/80" : "text-theme-secondary"
+                      return (
+                        <div key={item.itemId} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-lg p-3 rounded-xl ${
+                            isUser 
+                              ? "bg-accent-secondary text-white" 
+                              : "bg-theme-tertiary text-theme-primary"
                           }`}>
-                            {item.timestamp}
-                          </div>
-                          <div className="whitespace-pre-wrap">
-                            <ReactMarkdown>{displayTitle}</ReactMarkdown>
+                            <div className={`text-xs font-mono mb-1 ${
+                              isUser ? "text-white/80" : "text-theme-secondary"
+                            }`}>
+                              {item.timestamp}
+                            </div>
+                            <div className="whitespace-pre-wrap">
+                              <ReactMarkdown>{displayTitle}</ReactMarkdown>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                )}
               </div>
             </div>
-            {/* Controls */}
-            <div className="p-6 border-t border-theme-primary/20 bg-transparent backdrop-blur-xl">
-              {/* Text Input */}
-              <div className="flex gap-2">
-                <input
+
+            {/* Voice Actions Card - Shows when connected */}
+            {sessionStatus === 'CONNECTED' && !contactFormOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="p-4 bg-theme-tertiary border border-theme-secondary rounded-lg"
+              >
+                <h3 className="text-lg font-semibold text-theme-primary mb-3">
+                  🎤 Voice Commands Available
+                </h3>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      setContactFormData({ subject: '', context: '' });
+                      setContactFormOpen(true);
+                    }}
+                    className="flex-1 flex items-center gap-3 p-3 bg-accent-secondary hover:bg-accent-secondary/80 text-white rounded-lg transition-colors"
+                  >
+                    <FileText className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-medium">Send Email</div>
+                      <div className="text-sm opacity-90">Say "I want to contact Jacob"</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setCalendlyData({
+                        url: 'https://calendly.com/jacobchaffin/general-meeting',
+                        details: { type: 'general', duration: '30min' }
+                      });
+                      setCalendlyModalOpen(true);
+                    }}
+                    className="flex-1 flex items-center gap-3 p-3 bg-purple-600 hover:bg-purple-600/80 text-white rounded-lg transition-colors"
+                  >
+                    <Activity className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-medium">Schedule Meeting</div>
+                      <div className="text-sm opacity-90">Say "I want to schedule a meeting"</div>
+                    </div>
+                  </button>
+                </div>
                 
-                  type="text"
-                  value={userText}
-                  onChange={(e) => setUserText(e.target.value)}
-                  placeholder="Type your message here..."
-                  className="flex-1 bg-theme-tertiary border border-theme-secondary text-theme-primary placeholder-theme-secondary px-4 py-2 rounded-lg"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSendTextMessage();
-                    }
-                  }}
-                />
-                <button
-                  onClick={handleSendTextMessage}
-                  disabled={sessionStatus !== 'CONNECTED'}
-                  className="px-4 py-2 bg-accent-secondary hover:bg-accent-secondary/80 text-white rounded-lg disabled:opacity-50 flex items-center justify-center"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+                <p className="text-sm text-theme-secondary mt-3 text-center">
+                  Ask me anything about Jacob's work, or request actions using voice commands!
+                </p>
+              </motion.div>
+            )}
+
+            {/* Inline Contact Form */}
+            {contactFormOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="mt-6 p-6 bg-theme-tertiary border border-theme-secondary rounded-lg"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-theme-primary">Contact Jacob</h3>
+                  <button
+                    onClick={() => setContactFormOpen(false)}
+                    className="text-theme-secondary hover:text-theme-primary"
+                  >
+                    ×
+                  </button>
+                </div>
+                
+                <form onSubmit={handleContactFormSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-theme-primary mb-2">
+                      Your Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      value={formSubmissionState.name}
+                      onChange={handleFormInputChange}
+                      className="w-full bg-theme-primary border border-theme-secondary text-theme-primary px-3 py-2 rounded-lg text-sm"
+                      placeholder="Enter your name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-theme-primary mb-2">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      value={formSubmissionState.email}
+                      onChange={handleFormInputChange}
+                      className="w-full bg-theme-primary border border-theme-secondary text-theme-primary px-3 py-2 rounded-lg text-sm"
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-theme-primary mb-2">
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      name="subject"
+                      value={formSubmissionState.subject}
+                      onChange={handleFormInputChange}
+                      className="w-full bg-theme-primary border border-theme-secondary text-theme-primary px-3 py-2 rounded-lg text-sm"
+                      placeholder="What's this about?"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-theme-primary mb-2">
+                      Message *
+                    </label>
+                    <textarea
+                      name="message"
+                      required
+                      rows={4}
+                      value={formSubmissionState.message}
+                      onChange={handleFormInputChange}
+                      className="w-full bg-theme-primary border border-theme-secondary text-theme-primary px-3 py-2 rounded-lg text-sm resize-none"
+                      placeholder="Tell Jacob what you'd like to discuss..."
+                    />
+                  </div>
+                  
+                  {formSubmissionState.submitStatus === 'success' && (
+                    <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm">
+                      ✅ Message sent successfully! We'll get back to you soon.
+                    </div>
+                  )}
+                  
+                  {formSubmissionState.submitStatus === 'error' && (
+                    <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                      ❌ Failed to send message. Please try again.
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setContactFormOpen(false)}
+                      className="flex-1 px-4 py-2 border border-theme-secondary text-theme-secondary rounded-lg hover:bg-theme-secondary hover:text-theme-primary transition-colors text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={formSubmissionState.isSubmitting || formSubmissionState.submitStatus === 'success'}
+                      className="flex-1 px-4 py-2 bg-accent-secondary hover:bg-accent-secondary/80 text-white rounded-lg transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {formSubmissionState.isSubmitting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        'Send Message'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+
           </div>
         </motion.div>
         {/* Features Grid */}
@@ -585,20 +885,21 @@ const VoiceAIContent = () => {
         >
           {[
             {
-              icon: <Activity className="h-6 w-6" />,
-              title: "OpenAI Realtime",
-              description: "Advanced AI conversation with portfolio context"
+              icon: <Volume2 className="h-6 w-6" />,
+              title: "Realtime STS",
+              description: "Sub 200ms latency STS AI with real-time voice synthesis"
             },
             {
               icon: <FileText className="h-6 w-6" />,
-              title: "Resume Access",
-              description: "Real-time access to work experience and projects"
+              title: "Retrieval Augmented Generation",
+              description: "Uses RAG to retrieve project details and code snippets"
             },
             {
-              icon: <Volume2 className="h-6 w-6" />,
-              title: "Voice Synthesis",
-              description: "Natural AI voice responses"
-            }
+              icon: <Repeat className="h-6 w-6" />,
+              title: "UG-AI Protocol",
+              description: "Uses Human-in-the-loop to improve agentic systems"
+            },
+      
           ].map((feature, index) => (
             <motion.div
               key={index}
@@ -619,6 +920,14 @@ const VoiceAIContent = () => {
           ))}
         </motion.div>
       </div>
+
+      {/* Calendly Modal */}
+      <CalendlyModal
+        isOpen={calendlyModalOpen}
+        onClose={() => setCalendlyModalOpen(false)}
+        calendlyUrl={calendlyData.url}
+        meetingDetails={calendlyData.details}
+      />
     </section>
   );
 }

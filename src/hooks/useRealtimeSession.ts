@@ -103,29 +103,39 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     callbacks.onAgentHandoff?.(agentName);
   };
 
-  useEffect(() => {
-    if (sessionRef.current) {
-      // Log server errors
-      sessionRef.current.on("error", (...args: any[]) => {
+  // Setup event listeners directly in connect function
+  const setupEventListeners = (session: RealtimeSession) => {
+    // Error handler
+    const errorHandler = (...args: any[]) => {
+      try {
         console.error("❌ Session error:", args[0]);
+        console.error("❌ Full error details:", args);
         logServerEvent({
           type: "error",
-          message: args[0],
+          message: args[0]?.message || args[0] || "Unknown error",
+          details: args.length > 1 ? args.slice(1) : undefined,
         });
-      });
+      } catch (logError) {
+        console.error("❌ Error in error handler:", logError);
+      }
+    };
 
-      // history events
-      sessionRef.current.on("agent_handoff", handleAgentHandoff);
-      sessionRef.current.on("agent_tool_start", historyHandlers.handleAgentToolStart);
-      sessionRef.current.on("agent_tool_end", historyHandlers.handleAgentToolEnd);
-      sessionRef.current.on("history_updated", historyHandlers.handleHistoryUpdated);
-      sessionRef.current.on("history_added", historyHandlers.handleHistoryAdded);
-      sessionRef.current.on("guardrail_tripped", historyHandlers.handleGuardrailTripped);
+    // Log server errors
+    session.on("error", errorHandler);
 
-      // additional transport events
-      sessionRef.current.on("transport_event", handleTransportEvent);
-    }
-  }, [sessionRef.current]);
+    // history events
+    session.on("agent_handoff", handleAgentHandoff);
+    session.on("agent_tool_start", historyHandlers.handleAgentToolStart);
+    session.on("agent_tool_end", historyHandlers.handleAgentToolEnd);
+    session.on("history_updated", historyHandlers.handleHistoryUpdated);
+    session.on("history_added", historyHandlers.handleHistoryAdded);
+    session.on("guardrail_tripped", historyHandlers.handleGuardrailTripped);
+
+    // additional transport events
+    session.on("transport_event", handleTransportEvent);
+
+    console.log("✅ Event listeners attached to session");
+  };
 
   const connect = useCallback(
     async ({
@@ -172,6 +182,10 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       console.log("🔗 Connecting session with API key...");
       await sessionRef.current.connect({ apiKey: ek });
       console.log("✅ Session connected successfully");
+      
+      // Setup event listeners after connection
+      setupEventListeners(sessionRef.current);
+      
       updateStatus('CONNECTED');
     },
     [callbacks, updateStatus],

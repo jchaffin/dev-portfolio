@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
+  // Handle preflight requests
+  if (request.method === 'OPTIONS' && request.nextUrl.pathname.startsWith('/api/')) {
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
+  }
+
   // Add security headers
   const response = NextResponse.next()
   
@@ -16,7 +28,7 @@ export function middleware(request: NextRequest) {
     'Content-Security-Policy',
     "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; \
     style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; \
-    connect-src 'self' https://api.openai.com https://*.openai.com;"
+    connect-src 'self' https://api.openai.com https://*.openai.com https://api.cloud.copilotkit.ai;"
   )
   
   // CORS headers for API routes

@@ -5,5 +5,5 @@ import { loadEnvConfig } from '@next/env'
  * @param {string} [dir=process.cwd()] - The directory to load .env files from.
  */
 export function envConfig(dir: string = process.cwd()) {
-  loadEnvConfig(dir)
+  loadEnvConfig(dir, process.env.NODE_ENV !== 'production')
 } 

@@ -1,6 +1,6 @@
 import { Skill, Project } from '@/types'
 import { PROJECT_CATEGORIES } from '@/lib/constants'
-import resumeData from './sample-resume.json'
+import resumeData from './resume.json'
 
 // Calculate skill level based on frequency in resume experience only (avoiding circular dependency)
 const calculateSkillLevel = (skillName: string): number => {
@@ -74,74 +74,8 @@ const extractSkillsFromResume = (): Skill[] => {
   return uniqueSkills.sort((a, b) => b.level - a.level);
 };
 
-export const projects: Project[] = [
-  {
-    id: 1,
-    title: 'E-commerce Platform',
-    description: 'Full-stack e-commerce solution with payment integration, inventory management, and admin dashboard. Features include user authentication, shopping cart, order tracking, and real-time inventory updates.',
-    tech: ['Next.js', 'Prisma', 'PostgreSQL', 'Stripe', 'Tailwind CSS', 'NextAuth'],
-    github: 'https://github.com/yourusername/ecommerce',
-    live: 'https://ecommerce-demo.vercel.app',
-    featured: true,
-    category: PROJECT_CATEGORIES.FULLSTACK,
-    image: '/images/ecommerce-preview.jpg'
-  },
-  {
-    id: 2,
-    title: 'Real-time Chat Application',
-    description: 'WebSocket-based chat application with private rooms, file sharing, message encryption, and real-time notifications. Built with modern web technologies for seamless user experience.',
-    tech: ['React', 'Socket.io', 'Express', 'MongoDB', 'JWT', 'Cloudinary'],
-    github: 'https://github.com/yourusername/chat-app',
-    live: 'https://chat-app-demo.vercel.app',
-    featured: true,
-    category: PROJECT_CATEGORIES.FULLSTACK,
-    image: '/images/chat-preview.jpg'
-  },
-  {
-    id: 3,
-    title: 'Task Management API',
-    description: 'RESTful API with comprehensive authentication, CRUD operations, role-based access control, and extensive testing. Includes API documentation with Swagger.',
-    tech: ['Node.js', 'Express', 'PostgreSQL', 'Jest', 'Swagger', 'JWT'],
-    github: 'https://github.com/yourusername/task-api',
-    live: 'https://task-api-docs.vercel.app',
-    featured: false,
-    category: PROJECT_CATEGORIES.BACKEND,
-    image: '/images/api-preview.jpg'
-  },
-  {
-    id: 4,
-    title: 'Weather Dashboard',
-    description: 'Dynamic weather application with location services, 7-day forecasts, interactive charts, and weather alerts. Features responsive design and offline capabilities.',
-    tech: ['React', 'Chart.js', 'OpenWeather API', 'PWA', 'Service Worker'],
-    github: 'https://github.com/yourusername/weather-dashboard',
-    live: 'https://weather-dashboard-demo.vercel.app',
-    featured: false,
-    category: PROJECT_CATEGORIES.FRONTEND,
-    image: '/images/weather-preview.jpg'
-  },
-  {
-    id: 5,
-    title: 'Blog CMS Platform',
-    description: 'Content management system with markdown support, SEO optimization, analytics dashboard, and multi-user collaboration. Features automated deployment and content versioning.',
-    tech: ['Next.js', 'MDX', 'Prisma', 'NextAuth', 'Vercel', 'Google Analytics'],
-    github: 'https://github.com/yourusername/blog-cms',
-    live: 'https://blog-cms-demo.vercel.app',
-    featured: false,
-    category: PROJECT_CATEGORIES.FULLSTACK,
-    image: '/images/blog-preview.jpg'
-  },
-  {
-    id: 6,
-    title: 'Cryptocurrency Tracker',
-    description: 'Real-time cryptocurrency price tracking application with portfolio management, price alerts, and historical data visualization. Integrates with multiple crypto APIs.',
-    tech: ['React', 'Redux', 'Chart.js', 'CoinGecko API', 'Firebase'],
-    github: 'https://github.com/yourusername/crypto-tracker',
-    live: 'https://crypto-tracker-demo.vercel.app',
-    featured: false,
-    category: PROJECT_CATEGORIES.FRONTEND,
-    image: '/images/crypto-preview.jpg'
-  }
-]
+// Projects are now fetched dynamically from GitHub API via getProjects()
+// See: /api/projects and src/lib/getProjects.ts
 
 // Extract experiences from resume data
 const extractExperiencesFromResume = () => {
