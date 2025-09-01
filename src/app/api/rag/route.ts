@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { envConfig } from '@/lib/envConfig';
-import { createGhRag } from '@/lib/gh-rag/index.js';
+import { createGhRag } from '@jchaffin/gh-rag';
 import { Pinecone } from '@pinecone-database/pinecone';
 
 export async function OPTIONS(request: NextRequest) {
