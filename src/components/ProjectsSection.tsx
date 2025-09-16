@@ -79,7 +79,7 @@ const ProjectCard = ({ project, index }: { project: Project, index: number }) =>
             href={project.github} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-theme-secondary hover:text-theme-primary transition-colors"
+            className="text-theme-secondary hover:text-blue-600 transition-colors"
           >
             <Github size={20} />
           </a>
@@ -87,7 +87,7 @@ const ProjectCard = ({ project, index }: { project: Project, index: number }) =>
             href={project.live} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-theme-secondary hover:text-theme-primary transition-colors"
+            className="text-theme-secondary hover:text-blue-600 transition-colors"
           >
             <ExternalLink size={20} />
           </a>

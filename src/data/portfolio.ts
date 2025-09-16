@@ -32,11 +32,18 @@ const calculateSkillLevel = (skillName: string): number => {
   
   // Convert to percentage (70-95 range for realistic levels)
   const percentage = Math.min(95, Math.max(70, 70 + (frequency / maxFrequency) * 25));
-  
-  return Math.round(percentage);
+
+  // Enforce minimum levels for key skills where real proficiency is higher
+  const minimumSkillLevels: Record<string, number> = {
+    // Ensure React reflects senior-level proficiency
+    'react': 85,
+  };
+
+  const minOverride = minimumSkillLevels[skillName.toLowerCase()];
+  const adjusted = minOverride ? Math.max(percentage, minOverride) : percentage;
+
+  return Math.round(adjusted);
 };
-
-
 
 // Extract skills from resume data and map them to Skill objects
 const extractSkillsFromResume = (): Skill[] => {

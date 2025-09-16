@@ -1,9 +1,8 @@
-# Jacob Chaffin - Portfolio
+# Devfolio
 
-Modern portfolio website with integrated AI voice assistant. Built with Next.js 15 and OpenAI's Realtime API.
+Repository for my website. 
 
-## Features
-
+### Features
 - **Voice AI Assistant** - Navigate and ask questions using voice
 - **Dynamic Skills** - AI-powered skill categorization 
 - **Live Projects** - Real-time GitHub integration

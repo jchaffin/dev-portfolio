@@ -1,8 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'motion/react'
-import { Mail, Github, Linkedin } from 'lucide-react'
+import { Mail, Github, Linkedin, Send } from 'lucide-react'
+import { useRealtimeSession } from '../hooks/useRealtimeSession'
 
 const ContactSection = () => {
   const socialLinks = [
@@ -34,7 +35,7 @@ const ContactSection = () => {
           className="text-center"
         >
           <h2 className="text-4xl font-bold mb-6 text-theme-primary">
-            Let&apos;s Work Together
+          Get In Touch
           </h2>
           <p className="text-theme-secondary mb-6">
             I&apos;m always interested in new opportunities and collaborations. 

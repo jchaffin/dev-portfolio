@@ -1,14 +1,14 @@
 import { tool } from './types'
 import { RealtimeAgent } from '@openai/agents/realtime'
-import { skills } from '@/data/portfolio'
+import { skills as baseSkills } from '@/data/portfolio'
+import { getDynamicSkills } from '@/lib/skills'
 import resumeData from '@/data/resume.json'
 // gh-rag is server-side only due to Node.js dependencies
-
-// Debug: Check if skills are loaded
-console.log('🔧 MeAgent - Skills loaded:', skills.length);
-console.log('🔧 MeAgent - Skills:', skills.map(s => s.name));
-
 // Create the instructions with portfolio context
+const experienceOverview = (resumeData.experience || [])
+  .map(exp => `- ${exp.role} at ${exp.company} (${exp.duration || `${exp.startDate} – ${exp.endDate || 'Present'}`})`)
+  .join('\n');
+
 const createMeAgentInstructions = () => {
   return `SYSTEM OVERRIDE: YOU ARE AN ENGLISH-ONLY AI. YOU CANNOT SPEAK SPANISH. YOU CANNOT SPEAK ANY OTHER LANGUAGE. YOU MUST ONLY SPEAK ENGLISH. IF YOU HEAR SPANISH, YOU MUST RESPOND IN ENGLISH. IF YOU ARE TEMPTED TO SPEAK SPANISH, YOU MUST SPEAK ENGLISH INSTEAD. THIS IS A HARDCODED REQUIREMENT THAT CANNOT BE OVERRIDDEN.
 
@@ -28,6 +28,9 @@ ${resumeData.experience[0]?.description}
 
 **Key Skills**: ${resumeData.skills.slice(0, 10).join(', ')}
 
+# Work Experience (selected)
+${experienceOverview}
+
 CRITICAL: You can ONLY speak English. You CANNOT speak Spanish. You CANNOT speak any other language. If someone speaks Spanish to you, you must respond in English saying "I can only communicate in English. Please continue in English." Then proceed in English.
 
 # Personality and Tone
@@ -38,10 +41,10 @@ You are the voice of Mr. Chaffin's personal website, jacobchaffin.io. You act as
 You introduce and explain the work of Mr. Chaffin to visitors of his website, guiding them through projects, answering questions about his experience, and offering context for his technical capabilities and career focus.
 
 ## Demeanor
-Confident, calm, and intelligent. You sound like someone who knows what they're talking about, but never overstates or speculates.
+Confident, calm, and intelligent. You provide definitive, code-grounded statements without hedging or speculation.
 
 ## Tone
-Professional and clear, with a conversational edge. You avoid jargon unless necessary, and explain technical ideas in plain terms when possible.
+Professional and clear, with a conversational edge. Avoid hedging terms (e.g., "appears to", "seems", "likely"). If uncertain, silently call tools and then answer definitively based on results.
 
 ## Level of Enthusiasm
 Moderate. You're engaged and informative, but never over-eager or artificial.
@@ -67,7 +70,9 @@ Use domain-specific vocabulary when appropriate (e.g., "token alignment," "phone
 - If the caller corrects any detail, acknowledge the correction in a straightforward manner and confirm the new spelling or value.
 - When a user asks to see a specific page or section, use the navigation tool to take them there.
 - When users ask about projects, technical work, or want to see all projects, ALWAYS use the get_projects tool FIRST to load project data and pre-cache RAG information.
-- When users ask about specific project details or code examples, use search_github_repo to find relevant code snippets.
+- When users ask about specific project details or code examples, prefer summarize_project with the project name. If needed, follow with get_project_details and search_github_repo.
+- When the user asks about a project by name (e.g., "Tell me about <project>"), you MUST call summarize_project first and wait for results before responding. If more depth is requested, follow with get_project_details and/or search_github_repo.
+- NEVER tell the user that a repository lacks a README or description. Always provide a code-informed explanation using RAG results instead of stating that information is missing.
 - When users ask about skills or technical expertise, use the get_skills_info tool to provide accurate information.
 - Use the download_resume tool when users request resume information or want to download it.
 - When users want to contact Jacob or send an email, IMMEDIATELY use the send_email tool to open a contact form. Do not ask for details first - just open the form.
@@ -78,6 +83,7 @@ Use domain-specific vocabulary when appropriate (e.g., "token alignment," "phone
 - About page (about section)
 - Skills page (skills section) 
 - Projects page (projects section)
+- Voice page (voice section)
 - Contact page (contact section)
 - Resume (resume download)
 - GitHub (opens GitHub profile)
@@ -171,6 +177,77 @@ export const meAgent = new RealtimeAgent({
   instructions: createMeAgentInstructions(),
   tools: [
     tool({
+      name: 'summarize_project',
+      description: 'Summarize a project by name using RAG. Always used when users ask about a specific project. Returns repo match and code-informed snippets for summarization.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project: { type: 'string', description: 'Project name as the user said it (e.g., "AI-TUTOR")' },
+          focus: { type: 'string', description: 'Optional focus area: architecture, features, APIs, etc.' },
+          question: { type: 'string', description: 'Original user question to drive RAG (preferred)' },
+          limit: { type: 'number', description: 'Max snippets per query', default: 6 }
+        },
+        required: ['project'],
+        additionalProperties: false
+      },
+      execute: async (input: any) => {
+        const { project, focus, question, limit = 6 } = input;
+        try {
+          // Load repos and pick best match by name
+          const res = await fetch('/api/projects');
+          const repos = res.ok ? await res.json() : [];
+          const projectLower = String(project || '').toLowerCase();
+          const candidates = Array.isArray(repos) ? repos : [];
+          const matched = candidates.find((r: any) => String(r.name || '').toLowerCase() === projectLower)
+            || candidates.find((r: any) => String(r.name || '').toLowerCase().includes(projectLower))
+            || { name: project };
+
+          const repoName = matched.name || project;
+          const baseQueries = [
+            question?.trim() || focus?.trim() || `overview of ${repoName}`
+          ];
+
+          // Fetch in parallel with RAG cache warming in place
+          const respList = await Promise.all(
+            baseQueries.map(async (q) => {
+              try {
+                const r = await fetch('/api/rag', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ repo: repoName, query: q, limit })
+                });
+                if (r.ok) return await r.json();
+              } catch {}
+              return null;
+            })
+          );
+
+          const snippets: any[] = [];
+          for (const resp of respList) {
+            if (resp && Array.isArray(resp.snippets)) {
+              for (const s of resp.snippets) {
+                // Deduplicate by file + content start
+                const key = `${s.file || s.path || ''}::${(s.content || '').slice(0, 80)}`;
+                if (!snippets.some((x) => `${x.file || x.path || ''}::${(x.content || '').slice(0,80)}` === key)) {
+                  snippets.push(s);
+                }
+              }
+            }
+          }
+
+          return {
+            success: true,
+            repo: repoName,
+            queriesUsed: baseQueries,
+            snippets,
+            message: 'Project analysis prepared from code references.'
+          };
+        } catch (error) {
+          return { success: false, message: 'Failed to summarize project via RAG' };
+        }
+      }
+    }),
+    tool({
       name: 'navigate_to_section',
       description: 'Navigate to a specific section of the portfolio website',
       parameters: {
@@ -224,20 +301,34 @@ export const meAgent = new RealtimeAgent({
         const { category } = input;
         
         console.log('🔧 get_skills_info called with:', { category });
-        console.log('🔧 Available skills from portfolio:', skills.length);
+        console.log('🔧 Available base skills from portfolio:', baseSkills.length);
         
         try {
-          // Pass skills to semantic categorization API
+          // Fetch projects from API (GitHub-backed) first
+          const projectsRes = await fetch('/api/projects');
+          const githubRepos = projectsRes.ok ? await projectsRes.json() : [];
+          const githubProjects = Array.isArray(githubRepos)
+            ? githubRepos.map((repo: any) => ({
+                title: repo.name,
+                description: repo.description || '',
+                tech: Array.isArray(repo.topics) ? repo.topics : [],
+              }))
+            : [];
+
+          // Recalculate dynamic skills using shared util
+          const recalculatedSkills = getDynamicSkills(baseSkills, githubProjects);
+
+          // Pass recalculated skills to semantic categorization API
           const response = await fetch('/api/semantic-categorize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ skills: skills })
+            body: JSON.stringify({ skills: recalculatedSkills })
           });
           
           if (!response.ok) {
             console.log('🔧 Semantic categorize API failed, falling back to raw skills');
             // Fallback to raw skills if API fails
-            const rawSkills = skills.map(s => ({
+            const rawSkills = recalculatedSkills.map(s => ({
               name: s.name,
               level: s.level,
               category: 'uncategorized',
@@ -425,7 +516,7 @@ export const meAgent = new RealtimeAgent({
     }),
     tool({
       name: 'download_resume',
-      description: 'Download Master Chaffin\'s resume PDF',
+      description: 'Download Jacob Chaffin\'s resume PDF',
       parameters: {
         type: 'object',
         properties: {},
@@ -496,14 +587,7 @@ export const meAgent = new RealtimeAgent({
 
           const githubRepos = await apiRes.json();
           
-          // Pre-load RAG data in background for common project queries
-          const ragQueries = [
-            'authentication system',
-            'database models', 
-            'API endpoints',
-            'React components',
-            'project architecture'
-          ];
+          // Removed hardcoded prefetch queries
           
           // Get repo names from GitHub API response
           const repoNames = githubRepos
@@ -511,16 +595,7 @@ export const meAgent = new RealtimeAgent({
             .map((repo: any) => repo.name)
             .filter(Boolean);
           
-          const repoName = repoNames[0] || 'devfolio'; // Use first available repo or default
-          
-          // Fire off RAG requests in background with correct repo (don't await)
-          ragQueries.forEach(query => {
-            fetch('/api/rag', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ repo: repoName, query, limit: 3 })
-            }).catch(() => {}); // Silent fail for background preloading
-          });
+          // Prefetch disabled to avoid hardcoded queries
           
           console.log('🔧 Projects fetched from API, RAG preloading started');
           
@@ -549,6 +624,71 @@ export const meAgent = new RealtimeAgent({
             projects: [],
             message: 'Error fetching projects from API'
           };
+        }
+      }
+    }),
+    // Fetch project details aggressively via gh-rag when high-level metadata is missing
+    tool({
+      name: 'get_project_details',
+      description: 'Fetch concrete, code-level details for a GitHub repository using gh-rag. Use this when a repo has no README/description or the user asks for specifics. Returns snippets and is intended to be summarized concisely to the user.',
+      parameters: {
+        type: 'object',
+        properties: {
+          repo: { type: 'string', description: 'Repository name (e.g., devfolio, prosody-ai)' },
+          topic: { type: 'string', description: 'Optional focus area, like "architecture", "authentication", "API endpoints"' },
+          limit: { type: 'number', description: 'Max number of snippets to retrieve', default: 6 }
+        },
+        required: ['repo'],
+        additionalProperties: false
+      },
+      execute: async (input: any) => {
+        const { repo, topic, limit = 6 } = input;
+        if (!repo) {
+          return { success: false, message: 'Missing repo' };
+        }
+        try {
+          const baseQueries = topic
+            ? [topic, `${topic} implementation`, `${topic} architecture`]
+            : ['README', 'overview', 'architecture', 'features', 'goals', 'implementation'];
+
+          const allSnippets: any[] = [];
+          for (const q of baseQueries) {
+            if (allSnippets.length >= limit) break;
+            try {
+              const res = await fetch('/api/rag', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ repo, query: q, limit })
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data?.snippets?.length) {
+                  for (const s of data.snippets) {
+                    if (allSnippets.length < limit) {
+                      allSnippets.push(s);
+                    } else {
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch {
+              // continue to next query
+            }
+          }
+
+          return {
+            success: true,
+            repo,
+            topic: topic || null,
+            snippetsFound: allSnippets.length,
+            snippets: allSnippets,
+            message: allSnippets.length
+              ? `Collected ${allSnippets.length} code references from ${repo} for detailed explanation.`
+              : `No direct snippets found; consider running search_github_repo with a more specific query.`
+          };
+        } catch (error) {
+          return { success: false, message: 'Failed to fetch project details' };
         }
       }
     }),
@@ -608,43 +748,14 @@ export const meAgent = new RealtimeAgent({
             console.log('🔧 RAG API failed, falling back to mock data:', ragError);
           }
           
-          // Fallback: provide general project information
-          console.log('🔧 Using fallback behavior for query:', query);
-          
-          const fallbackSnippets = [
-            {
-              file: 'src/components/VoiceAISection.tsx',
-              content: 'Real-time voice AI implementation with WebRTC and audio processing',
-              score: 0.9
-            },
-            {
-              file: 'src/hooks/useRealtimeSession.ts', 
-              content: 'Session management for real-time voice interactions',
-              score: 0.85
-            },
-            {
-              file: 'src/app/agentConfigs/MeAgent.ts',
-              content: 'AI agent configuration with tools for portfolio interaction',
-              score: 0.8
-            }
-          ];
-          
-          // Filter snippets based on query keywords
-          const queryLower = query.toLowerCase();
-          const relevantSnippets = fallbackSnippets.filter(snippet => 
-            snippet.content.toLowerCase().includes(queryLower) ||
-            snippet.file.toLowerCase().includes(queryLower) ||
-            queryLower.includes('voice') || queryLower.includes('ai') || 
-            queryLower.includes('react') || queryLower.includes('component')
-          ).slice(0, limit);
-          
+          // If RAG call did not return snippets, return a neutral response
           return {
             success: true,
             repo: repo || 'devfolio',
             query,
-            snippetsFound: relevantSnippets.length,
-            snippets: relevantSnippets,
-            message: `Found ${relevantSnippets.length} general code reference${relevantSnippets.length === 1 ? '' : 's'} for "${query}" (RAG service unavailable)`
+            snippetsFound: 0,
+            snippets: [],
+            message: 'No snippets returned yet.'
           };
           
         } catch (error) {

@@ -7,7 +7,7 @@ import ThemeToggle from './ThemeToggle'
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  const navItems = ['About', 'Skills', 'Projects', 'Resume', 'Contact']
+  const navItems = ['About', 'Skills', 'Projects', 'Voice', 'Resume', 'Contact']
 
   const handleNavClick = (item: string) => {
     setIsMenuOpen(false)

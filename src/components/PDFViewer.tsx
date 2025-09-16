@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
+import 'react-pdf/dist/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+
+
 
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
@@ -18,7 +22,6 @@ interface PDFViewerProps {
 
 function PDFViewer({ pdfUrl, title: _title = 'PDF Document', className = '' }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [pageWidth, setPageWidth] = useState<number>(800);
@@ -41,7 +44,6 @@ function PDFViewer({ pdfUrl, title: _title = 'PDF Document', className = '' }: P
   useEffect(() => {
     setLoading(true)
     setError(null)
-    setPageNumber(1)
   }, [pdfUrl])
 
   function onDocLoad ({ numPages: nextNumPages }: PDFDocumentProxy): void {
@@ -55,22 +57,9 @@ function PDFViewer({ pdfUrl, title: _title = 'PDF Document', className = '' }: P
     setLoading(false)
   }
 
-  function changePage(offset: number) {
-    setPageNumber(prevPageNumber => prevPageNumber + offset)
-  }
-
-  function previousPage() {
-    changePage(-1)
-  }
-
-  function nextPage() {
-    changePage(1)
-  }
-
 
   return (
-          <div className={`flex flex-col items-center space-y-4 ${className}`}>
-      
+    <div className={`${className}`}>
       {loading && (
         <div className="flex items-center justify-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -94,7 +83,7 @@ function PDFViewer({ pdfUrl, title: _title = 'PDF Document', className = '' }: P
         </div>
       )}
 
-      <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden shadow-lg">
+      <div className="flex flex-col items-center space-y-6 pt-4">
         <Document
           file={pdfUrl}
           onLoadSuccess={onDocLoad}
@@ -111,40 +100,19 @@ function PDFViewer({ pdfUrl, title: _title = 'PDF Document', className = '' }: P
             </div>
           }
         >
-          <Page
-            pageNumber={pageNumber}
-            width={pageWidth}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-          />
+          {numPages && Array.from(new Array(numPages), (_, index) => (
+            <div key={`page_${index + 1}`} className="mb-6">
+              <Page
+                pageNumber={index + 1}
+                width={pageWidth}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+                className="border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg"
+              />
+            </div>
+          ))}
         </Document>
       </div>
-
-      {numPages && (
-        <div className="flex items-center space-x-4">
-          <button
-            type="button"
-            disabled={pageNumber <= 1}
-            onClick={previousPage}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            Previous
-          </button>
-          
-          <span className="text-gray-700 dark:text-gray-300">
-            Page {pageNumber} of {numPages}
-          </span>
-          
-          <button
-            type="button"
-            disabled={pageNumber >= numPages}
-            onClick={nextPage}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            Next
-          </button>
-        </div>
-      )}
     </div>
   )
 }

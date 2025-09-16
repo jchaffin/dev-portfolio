@@ -4,86 +4,10 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { skills as portfolioSkills } from '@/data/portfolio'
 import { Skill } from '@/types'
-import resumeData from '@/data/resume.json'
-import { getProjects, type Project } from '@/lib/getProjects'
+import { getProjects } from '@/lib/getProjects'
+import { getDynamicSkills } from '@/lib/skills'
 
-// Skill level calculation is now handled by getDynamicSkills() with GitHub projects
-
-// Get dynamic skills with calculated levels and calculation data
-const getDynamicSkills = (githubProjects: Project[] = []): Skill[] => {
-  // Calculate levels for all skills first with calculation data
-  const skillsWithLevels = portfolioSkills.map(skill => {
-    // Calculate frequency data for the formula
-    let frequency = 0
-    let breakdown = {
-      projects: 0,
-      experience: 0,
-      resumeSkills: 0
-    }
-    const sources: string[] = []
-    
-    // Count frequency in GitHub projects
-    githubProjects.forEach(project => {
-      const projectText = `${project.title} ${project.description} ${project.tech.join(' ')}`.toLowerCase()
-      const skillLower = skill.name.toLowerCase()
-      
-      if (projectText.includes(skillLower)) {
-        frequency += 1
-        breakdown.projects += 1
-        sources.push(`GitHub Project: ${project.title}`)
-      }
-      
-      if (project.tech.some((tech: string) => tech.toLowerCase().includes(skillLower))) {
-        frequency += 2
-        breakdown.projects += 2
-        sources.push(`GitHub Project Tech: ${project.title}`)
-      }
-    })
-    
-    // Count frequency in resume experience
-    resumeData.experience?.forEach(exp => {
-      const expText = `${exp.role} ${exp.description} ${(exp.keywords || []).join(' ')}`.toLowerCase()
-      const skillLower = skill.name.toLowerCase()
-      
-      if (expText.includes(skillLower)) {
-        frequency += 1
-        breakdown.experience += 1
-        sources.push(`Experience: ${exp.role} at ${exp.company}`)
-      }
-      
-      if (exp.keywords?.some(keyword => keyword.toLowerCase().includes(skillLower))) {
-        frequency += 2
-        breakdown.experience += 2
-        sources.push(`Experience Keywords: ${exp.role}`)
-      }
-    })
-    
-    // Count frequency in resume skills
-    if (resumeData.skills?.some(resumeSkill => resumeSkill.toLowerCase().includes(skill.name.toLowerCase()))) {
-      frequency += 3
-      breakdown.resumeSkills += 3
-      sources.push('Resume Skills')
-    }
-    
-    const maxFrequency = (githubProjects.length * 3) + (resumeData.experience?.length || 0) * 3 + 3
-    
-    // Calculate level using the formula: 70 + (frequency / maxFrequency) * 25
-    const level = Math.min(95, Math.max(70, Math.round(70 + (frequency / Math.max(maxFrequency, 1)) * 25)))
-    
-    return {
-      ...skill,
-      level,
-      calculation: {
-        frequency,
-        maxFrequency,
-        sources: Array.from(new Set(sources)),
-        breakdown
-      }
-    }
-  })
-  
-  return skillsWithLevels
-}
+// Skill level calculation is handled by shared util getDynamicSkills(baseSkills, githubProjects)
 
 const getCategoryColor = (category: string) => {
   // Simple hash-based color generation for semantic categories
@@ -204,7 +128,7 @@ const SkillsSection = () => {
       try {
         // Fetch GitHub projects first
         const githubProjects = await getProjects();
-        const initialSkills = getDynamicSkills(githubProjects);
+        const initialSkills = getDynamicSkills(portfolioSkills, githubProjects);
         
         // Call the semantic categorization API
         const response = await fetch('/api/semantic-categorize', {
@@ -263,7 +187,7 @@ const SkillsSection = () => {
           </p>
           <button
             onClick={() => setShowFormula(!showFormula)}
-            className="text-sm text-theme-secondary hover:text-theme-primary transition-colors underline"
+            className="text-sm text-theme-secondary hover:text-theme-primary transition-colors underline cursor-pointer"
           >
             How is score calculated?
           </button>

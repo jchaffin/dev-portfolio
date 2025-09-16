@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Download, Eye, X } from 'lucide-react'
+import { Download, Eye, X, Printer } from 'lucide-react'
 import dynamic from "next/dynamic";
 
 const PDFViewer = dynamic(() => import("./PDFViewer"), {
@@ -21,6 +21,10 @@ export default function ResumeSection() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  const handlePrint = () => {
+    window.open('/resume.pdf', '_blank')?.print()
   }
 
   return (
@@ -61,20 +65,43 @@ export default function ResumeSection() {
 
         {/* PDF Modal */}
         {showPDF && (
-          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-            <div className="bg-theme-secondary rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-theme-primary shadow-2xl">
-              <div className="flex justify-between items-center p-4 border-b border-theme-primary bg-theme-primary rounded-t-lg">
+          <div className="fixed inset-0 bg-theme-primary/20 backdrop-blur-md flex items-center justify-center z-50 p-4 pt-20">
+            <div className="bg-theme-secondary rounded-lg max-w-4xl w-full max-h-[90vh] border border-theme-primary shadow-2xl flex flex-col">
+              <div className="flex justify-between items-center p-4 border-b border-theme-primary/20 bg-theme-primary/10 backdrop-blur-sm rounded-t-lg flex-shrink-0">
                 <h3 className="text-xl font-semibold text-theme-primary">
                   Resume
                 </h3>
-                <button
-                  onClick={() => setShowPDF(false)}
-                  className="text-theme-secondary hover:text-theme-primary transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handlePrint}
+                    className="text-theme-primary hover:text-theme-secondary transition-colors p-1 rounded cursor-pointer"
+                    title="Print PDF"
+                    aria-labelledby="print-button"
+                    aria-label="Print PDF"
+                  >
+                    <Printer className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="text-theme-primary hover:text-theme-secondary transition-colors p-1 rounded cursor-pointer"
+                    title="Download PDF"
+                    aria-labelledby="download-button"
+                    aria-label="Download PDF"
+                  >
+                    <Download className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setShowPDF(false)}
+                    className="text-theme-primary hover:text-theme-secondary transition-colors p-1 rounded cursor-pointer"
+                    title="Close"
+                    aria-labelledby="close-button"
+                    aria-label="Close modal"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
               </div>
-              <div className="p-4 bg-theme-secondary">
+              <div className="p-4 overflow-y-auto flex-1">
                 <PDFViewer 
                   pdfUrl="/resume.pdf" 
                   title="Jacob Chaffin - Resume"

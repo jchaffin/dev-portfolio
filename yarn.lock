@@ -1488,10 +1488,10 @@
   dependencies:
     minipass "^7.0.4"
 
-"@jchaffin/gh-rag@^0.2.1":
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/@jchaffin/gh-rag/-/gh-rag-0.2.1.tgz#59dc3bd64b86f1da21f3da136a9bbb29fc26bbdc"
-  integrity sha512-uPk16X1LXi5K/0lAGeWtuqsKgZYNZDztoQv/SU+glawxl6X9q4zHx4sz8q/xEsPQLWP8HfRUnT3aLZONVj4vmQ==
+"@jchaffin/gh-rag@^0.2.2":
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/@jchaffin/gh-rag/-/gh-rag-0.2.2.tgz#1e2e4900c7b39665c6b42c375e9c106a2b593dbb"
+  integrity sha512-DcEQLt5bdYJsGcce4MEv8Rnxy8KVRvBPgbFCqdXAb7oD2cHA7Uhv83wv0W4I+0LiKzAIbZQ37zGmcgWFCzvoIw==
   dependencies:
     "@pinecone-database/pinecone" "^6.1.2"
     dotenv "^17.2.1"
@@ -3269,6 +3269,13 @@
   integrity sha512-yzegtT82dwTNEe/9y+CM8cgb42WrUfMMCg2QqSddzO1J6uPmBD7qKCZ7dOHZP2Yrpm/kb0eqdNMn2MUyEiqBmA==
   dependencies:
     undici-types "~5.26.4"
+
+"@types/node@^20.11.24":
+  version "20.19.15"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.19.15.tgz#7deaf95b36c4be6b8414e4d054291e230062a43c"
+  integrity sha512-W3bqcbLsRdFDVcmAM5l6oLlcl67vjevn8j1FPZ4nx+K5jNoWCh+FC/btxFoBPnvQlrHHDwfjp1kjIEDfwJ0Mog==
+  dependencies:
+    undici-types "~6.21.0"
 
 "@types/parse-json@^4.0.0":
   version "4.0.2"

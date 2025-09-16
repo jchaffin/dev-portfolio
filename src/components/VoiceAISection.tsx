@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 import { motion } from 'motion/react'
-import { Activity, FileText, Volume2, Repeat, Filter } from 'lucide-react'
+import { Activity, FileText, Volume2, Repeat, Filter, Send, ChevronDown, X } from 'lucide-react'
 import CalendlyModal from './CalendlyModal'
 // Removed CopilotKit imports - using voice agent only
 import { experiences, skills } from '@/data/portfolio'
@@ -86,10 +86,11 @@ const VoiceAIContent = () => {
     submitStatus: 'idle'
   })
   const [calendlyData, setCalendlyData] = useState<{url: string, details?: {type: string, duration: string}}>({url: ''})
+  const [showCommandDrawer, setShowCommandDrawer] = useState<boolean>(false)
 
   // Voice agent UI control handlers - triggered by agent tool responses
   const handleAgentUIAction = (toolName: string, response: any) => {
-    console.log("🚀 Voice agent triggered UI action:", { toolName, response });
+    console.log("Voice agent triggered UI action:", { toolName, response });
     
     if (toolName === 'send_email' && response.success && response.action === 'show_contact_form') {
       setContactFormData({
@@ -184,6 +185,8 @@ const VoiceAIContent = () => {
     getProjects().then(setProjects);
   }, []);
 
+  // Removed hardcoded RAG warm-up to avoid assumptions
+
   // Portfolio data for context - fully dynamic from resume and GitHub
   const portfolioContext: PortfolioContext = {
     experiences: experiences as any,
@@ -233,19 +236,19 @@ const VoiceAIContent = () => {
       
       // Add event listeners to debug audio
       sdkAudioElement.addEventListener('loadedmetadata', () => {
-        console.log("🎵 Audio metadata loaded");
+        console.log("Audio metadata loaded");
       });
       
       sdkAudioElement.addEventListener('play', () => {
-        console.log("🎵 Audio started playing");
+        console.log("Audio started playing");
       });
       
       sdkAudioElement.addEventListener('pause', () => {
-        console.log("🎵 Audio paused");
+        console.log("Audio paused");
       });
       
       sdkAudioElement.addEventListener('error', (e) => {
-        console.error("🎵 Audio error:", e);
+        console.error("Audio error:", e);
       });
     }
   }, [sdkAudioElement]);
@@ -262,6 +265,7 @@ const VoiceAIContent = () => {
     disconnect,
     mute,
     sendEvent,
+    sendUserText,
   } = useRealtimeSession({
     onConnectionChange: (s) => {
       console.log("🔄 Session status changed:", s);
@@ -322,8 +326,8 @@ const VoiceAIContent = () => {
       console.log("Ephemeral key received successfully");
 
       const sdkAudioElement = audioElementRef.current;
-      console.log("🤖 AGENT NAMES:", [meAgent.name]);
-      console.log("🎵 Audio element for connection:", sdkAudioElement);
+      console.log("AGENT NAMES:", [meAgent.name]);
+      console.log("Audio element for connection:", sdkAudioElement);
       
       if (!sdkAudioElement) {
         throw new Error("Audio element not available");
@@ -338,7 +342,7 @@ const VoiceAIContent = () => {
         },
         outputGuardrails: [],
       });
-      console.log("✅ CONNECTION SUCCESSFUL - Agent connected");
+      console.log("CONNECTION SUCCESSFUL - Agent connected");
       
       // Trigger initial greeting after connection is established
       setTimeout(() => {
@@ -347,8 +351,8 @@ const VoiceAIContent = () => {
       }, 1000);
       
     } catch (error) {
-      console.error("❌ Connection failed:", error);
-      console.error("❌ Connection error details:", {
+      console.error("Connection failed:", error);
+      console.error("Connection error details:", {
         sessionStatus,
         audioElement: sdkAudioElement ? "present" : "missing",
         error
@@ -357,11 +361,11 @@ const VoiceAIContent = () => {
   };
 
   const disconnectFromRealtime = async () => {
-    console.log("🔌 Starting disconnect process...");
+    console.log("Starting disconnect process...");
     
     // First, stop the active microphone stream
       if (microphoneStream) {
-      console.log("🎤 Stopping microphone stream...");
+      console.log("Stopping microphone stream...");
       try {
         // Stop all tracks and disable them
         microphoneStream.getTracks().forEach(track => {
@@ -372,7 +376,7 @@ const VoiceAIContent = () => {
         
         // Clear the stream reference
         setMicrophoneStream(null);
-        console.log("✅ Microphone stream stopped successfully");
+        console.log("Microphone stream stopped successfully");
       } catch (error) {
         console.error("Error stopping microphone stream:", error);
       }
@@ -381,7 +385,7 @@ const VoiceAIContent = () => {
     // Stop any recording that might be active
     try {
       stopRecording();
-      console.log("✅ Recording stopped");
+      console.log("Recording stopped");
     } catch (error) {
       console.error("Error stopping recording:", error);
     }
@@ -407,7 +411,7 @@ const VoiceAIContent = () => {
     // Disconnect from the realtime session
     try {
       await disconnect();
-      console.log("✅ Realtime session disconnected");
+      console.log("Realtime session disconnected");
     } catch (error) {
       console.error('Error disconnecting from realtime session:', error);
     } finally {
@@ -463,7 +467,6 @@ const VoiceAIContent = () => {
         sdkAudioElement.volume = 1.0;
         console.log("🎵 Audio element prepared for autoplay");
       }
-
       connectToRealtime();
     }
   };
@@ -498,7 +501,7 @@ const VoiceAIContent = () => {
         // Mute and pause to avoid brief audio blips before pause takes effect.
         audioElementRef.current.muted = true;
         audioElementRef.current.pause();
-        console.log("🔇 Audio muted and paused");
+        console.log("Audio muted and paused");
       }
     }
 
@@ -565,7 +568,7 @@ const VoiceAIContent = () => {
   // Cleanup on component unmount
   useEffect(() => {
     return () => {
-      console.log("🧹 Component unmounting, cleaning up...");
+      console.log("Component unmounting, cleaning up...");
       
       // Stop recording
       stopRecording();
@@ -578,7 +581,7 @@ const VoiceAIContent = () => {
       }
       
       if (sessionStatus === "CONNECTED") {
-        console.log("🧹 CLEANUP - Disconnecting session on component unmount");
+        console.log("CLEANUP - Disconnecting session on component unmount");
         disconnect().catch(error => {
           console.error('Error during cleanup disconnect:', error);
         });
@@ -586,8 +589,28 @@ const VoiceAIContent = () => {
     };
   }, []); // Empty dependency array - only run on unmount
 
+  // Chat input state for sending text to the voice agent
+  const [chatInput, setChatInput] = useState<string>("");
+
+  const handleSendChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = chatInput.trim();
+    if (!text) return;
+
+    if (sessionStatus === "CONNECTED") {
+      try {
+        // Prefer SDK helper which creates a conversation item and triggers a response
+        sendUserText(text);
+      } catch {
+        // Fallback to manual event creation if needed
+        sendSimulatedUserMessage(text);
+      }
+      setChatInput("");
+    }
+  };
+
   return (
-    <section id="voice-ai" className="py-20 bg-gradient-primary dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 relative overflow-hidden">
+    <section id="voice" className="py-20 bg-gradient-primary dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 opacity-10">
         <motion.div
@@ -668,7 +691,7 @@ const VoiceAIContent = () => {
                 {transcriptItems.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-theme-secondary">
                     <div className="text-center">
-                      <p className="mb-2">🎤 Connect to start your voice conversation</p>
+                      <p className="mb-2">Connect to Assistant</p>
                       <p className="text-sm">The AI can help you learn about Jacob's work and even open contact forms or schedule meetings!</p>
                     </div>
                   </div>
@@ -705,55 +728,95 @@ const VoiceAIContent = () => {
                 )}
               </div>
             </div>
-
-            {/* Voice Actions Card - Shows when connected */}
+            {/* Voice Commands Drawer */}
             {sessionStatus === 'CONNECTED' && !contactFormOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="p-4 bg-theme-tertiary border border-theme-secondary rounded-lg"
-              >
-                <h3 className="text-lg font-semibold text-theme-primary mb-3">
-                  🎤 Voice Commands Available
-                </h3>
-                <div className="flex flex-col sm:flex-row gap-3">
+              <div className="px-6">
+                <div className="rounded-lg overflow-hidden">
                   <button
-                    onClick={() => {
-                      setContactFormData({ subject: '', context: '' });
-                      setContactFormOpen(true);
-                    }}
-                    className="flex-1 flex items-center gap-3 p-3 bg-accent-secondary hover:bg-accent-secondary/80 text-white rounded-lg transition-colors"
+                    onClick={() => setShowCommandDrawer(v => !v)}
+                    className={`w-full flex items-center justify-between bg-theme-tertiary px-4 py-2 cursor-pointer border border-theme-secondary ${showCommandDrawer ? 'rounded-t-lg border-b-0' : 'rounded-lg'}`}
+                    aria-label={showCommandDrawer ? 'Collapse voice commands' : 'Expand voice commands'}
                   >
-                    <FileText className="h-5 w-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Send Email</div>
-                      <div className="text-sm opacity-90">Say "I want to contact Jacob"</div>
-                    </div>
+                    <span className="text-sm font-semibold text-theme-primary">Voice commands</span>
+                    <ChevronDown className={`h-4 w-4 text-theme-secondary transition-transform ${showCommandDrawer ? 'rotate-180' : ''}`} />
                   </button>
-                  
-                  <button
-                    onClick={() => {
-                      setCalendlyData({
-                        url: 'https://calendly.com/jacobchaffin/general-meeting',
-                        details: { type: 'general', duration: '30min' }
-                      });
-                      setCalendlyModalOpen(true);
-                    }}
-                    className="flex-1 flex items-center gap-3 p-3 bg-purple-600 hover:bg-purple-600/80 text-white rounded-lg transition-colors"
-                  >
-                    <Activity className="h-5 w-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Schedule Meeting</div>
-                      <div className="text-sm opacity-90">Say "I want to schedule a meeting"</div>
+                  {showCommandDrawer && (
+                    <div className="bg-theme-tertiary border border-theme-secondary border-t-0 rounded-b-lg p-4">
+                      <div className="flex justify-end mb-2">
+                        <button
+                          onClick={() => setShowCommandDrawer(false)}
+                          className="text-theme-secondary hover:text-theme-primary cursor-pointer"
+                          aria-label="Close commands"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={() => {
+                            setContactFormData({ subject: '', context: '' });
+                            setContactFormOpen(true);
+                          }}
+                          className="flex-1 flex items-center gap-3 p-3 bg-accent-secondary hover:bg-accent-secondary/80 text-white rounded-lg transition-colors cursor-pointer"
+                        >
+                          <FileText className="h-5 w-5" />
+                          <div className="text-left">
+                            <div className="font-medium">Send Email</div>
+                            <div className="text-sm opacity-90">Say "I want to contact Jacob"</div>
+                          </div>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setCalendlyData({
+                              url: 'https://calendly.com/jacobchaffin',
+                              details: { type: 'general', duration: '30min' }
+                            });
+                            setCalendlyModalOpen(true);
+                          }}
+                          className="flex-1 flex items-center gap-3 p-3 bg-accent-primary hover:opacity-90 text-white rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Activity className="h-5 w-5" />
+                          <div className="text-left">
+                            <div className="font-medium">Schedule Meeting</div>
+                            <div className="text-sm opacity-90">Say "I want to schedule a meeting"</div>
+                          </div>
+                        </button>
+                      </div>
+                      <p className="text-sm text-theme-secondary mt-3 text-center">
+                        Ask me anything about Jacob's work, or request actions using voice commands!
+                      </p>
                     </div>
-                  </button>
+                  )}
                 </div>
-                
-                <p className="text-sm text-theme-secondary mt-3 text-center">
-                  Ask me anything about Jacob's work, or request actions using voice commands!
-                </p>
-              </motion.div>
+              </div>
+            )}
+
+            {/* Text Chat Input (hidden until connected) */}
+            {sessionStatus === 'CONNECTED' && (
+            <div className="px-6 pb-6 pt-4">
+              <form onSubmit={handleSendChat} className="flex items-center gap-3">
+                <div className="flex-1 bg-theme-tertiary rounded-lg h-12 flex items-center px-3 border border-theme-secondary/60">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder={sessionStatus === 'CONNECTED' ? 'Type a message to the voice agent…' : 'Connect first to chat'}
+                    disabled={sessionStatus !== 'CONNECTED'}
+                    className="w-full bg-transparent text-theme-primary placeholder-theme-secondary/70 focus:outline-none disabled:opacity-50"
+                    aria-label="Chat message input"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!chatInput.trim() || sessionStatus !== 'CONNECTED'}
+                  className="h-12 w-12 rounded-lg bg-theme-tertiary text-theme-secondary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer flex items-center justify-center border border-theme-secondary/60"
+                  aria-label="Send message"
+                >
+                  <Send className="w-6 h-6" />
+                </button>
+              </form>
+            </div>
             )}
 
             {/* Inline Contact Form */}
@@ -850,7 +913,7 @@ const VoiceAIContent = () => {
                     <button
                       type="button"
                       onClick={() => setContactFormOpen(false)}
-                      className="flex-1 px-4 py-2 border border-theme-secondary text-theme-secondary rounded-lg hover:bg-theme-secondary hover:text-theme-primary transition-colors text-sm"
+                      className="flex-1 px-4 py-2 bg-theme-tertiary border border-theme-secondary text-theme-secondary rounded-lg hover:opacity-90 transition-colors text-sm cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -910,7 +973,7 @@ const VoiceAIContent = () => {
               className="glass rounded-xl p-6"
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
+                <div className="p-2 text-blue-600 rounded-lg">
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-semibold text-theme-primary">{feature.title}</h3>

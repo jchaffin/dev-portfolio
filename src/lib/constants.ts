@@ -30,6 +30,7 @@ export const NAVIGATION_ITEMS = [
   { name: "About", href: "#about" },
   { name: "Skills", href: "#skills" },
   { name: "Projects", href: "#projects" },
+  { name: "Voice", href: "#voice" },
   { name: "Contact", href: "#contact" }
 ]
 

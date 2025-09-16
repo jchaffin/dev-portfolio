@@ -38,8 +38,7 @@ export const TranscriptProvider: FC<PropsWithChildren> = ({ children }) => {
       minute: "2-digit",
       second: "2-digit",
     });
-    const ms = now.getMilliseconds().toString().padStart(3, "0");
-    return `${time}.${ms}`;
+    return time;
   }
 
   const addTranscriptMessage: TranscriptContextValue["addTranscriptMessage"] = (itemId, role, text = "", isHidden = false) => {

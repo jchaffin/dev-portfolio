@@ -39,7 +39,7 @@
       "role": "Voice AI Engineer",
       "startDate": "September 2021",
       "endDate": "October 2024",
-      "duration": "September 2021 October 2024",
+      "duration": "September 2021-October 2024",
       "location": "Hybrid (Palo Alto, CA)",
       "description": "Developed modular UI components and dynamic pages for agent-assist tools using Next.js, React, and GraphQL, integrating live ASR and voice analytics. Engineered real-time sentiment visualization layers with phonetic and lexical embeddings for enhanced client-side rendering. Streamlined SSR/ISR logic for data-heavy voice sessions, improving initial load times by 35%. Modernized analytics pipelines to support LLM-driven conversational interfaces, implementing deep tone-aware inference. Built internal analytics tools with NumPy, Pandas, Jupyter, and Python for behavioral insights.",
       "keywords": [
