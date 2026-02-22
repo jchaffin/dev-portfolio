@@ -29,7 +29,7 @@
     "minimatch": "^10.0.3",
     "minisearch": "^7.1.2",
     "motion": "^12.23.3",
-    "next": "^15.0.0",
+    "next": "15.0.7",
     "openai": "^5.12.0",
     "pdfjs-dist": "5.3.31",
     "react": "^18",
