@@ -36,12 +36,11 @@ export const NAVIGATION_ITEMS = [
 
 export const SKILL_CATEGORIES = {
   FRONTEND: "Frontend",
-  BACKEND: "Backend", 
-  DATABASE: "Database",
-  DEVOPS: "DevOps",
-  LANGUAGE: "Language",
-  API: "API",
-  TOOLS: "Tools"
+  BACKEND: "Backend",
+  AI_ML: "AI & Machine Learning",
+  INFRASTRUCTURE: "Infrastructure & Real-time",
+  DEVOPS: "DevOps & Cloud",
+  LANGUAGES: "Programming Languages",
 } as const
 
 export const PROJECT_CATEGORIES = {
@@ -64,28 +63,3 @@ export const SESSION_STATUS = {
   CONNECTING: 'CONNECTING' as const,
   DISCONNECTED: 'DISCONNECTED' as const,
 } as const;
-
-// Local Projects Data
-export const LOCAL_PROJECTS = [
-  {
-    title: 'Real-time Chat Application',
-    description: 'WebSocket-based chat app with rooms, file sharing, and message encryption.',
-    tech: ['React', 'Socket.io', 'Express', 'MongoDB', 'JWT'],
-    github: 'https://github.com/jchaffin/chat-app',
-    live: 'https://chat-app-demo.vercel.app',
-  },
-  {
-    title: 'Task Management API',
-    description: 'RESTful API with authentication, CRUD operations, and comprehensive testing.',
-    tech: ['Node.js', 'Express', 'PostgreSQL', 'Jest', 'Swagger'],
-    github: 'https://github.com/jchaffin/task-api',
-    live: 'https://task-api-docs.vercel.app',
-  },
-  {
-    title: 'Weather Dashboard',
-    description: 'Dynamic weather app with location services, forecasts, and data visualization.',
-    tech: ['React', 'Chart.js', 'OpenWeather API', 'Geolocation'],
-    github: 'https://github.com/jchaffin/weather-dashboard',
-    live: 'https://weather-dashboard-demo.vercel.app',
-  }
-];

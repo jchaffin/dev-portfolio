@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": ["dom", "dom.iterable", "es6"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "es6"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "types": [],
@@ -12,7 +16,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
       {
@@ -21,17 +25,44 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/contexts/*": ["./src/contexts/*"],
-      "@/app/*": ["./src/app/*"],
-      "@/lib/*": ["./src/lib/*"],
-      "@/types/*": ["./src/types/*"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/hooks/*": ["./src/hooks/*"],
-      "@/agents/*": ["./src/agents/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/contexts/*": [
+        "./src/contexts/*"
+      ],
+      "@/app/*": [
+        "./src/app/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ],
+      "@/utils/*": [
+        "./src/utils/*"
+      ],
+      "@/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@/agents/*": [
+        "./src/agents/*"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/**/*"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "src/**/*",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

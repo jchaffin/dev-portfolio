@@ -1,6 +1,7 @@
 // Tailwind does not export PluginAPI or PluginUtils types directly.
 // Use 'any' for plugin argument if you want type safety, or define your own type.
 import type { Config } from 'tailwindcss'
+import typography from '@tailwindcss/typography'
 
 const config: Config = {
   darkMode: 'class',
@@ -39,6 +40,7 @@ const config: Config = {
     },
   },
   plugins: [
+    typography,
     // Custom plugin for theme utilities
     function({ addUtilities, theme }: any) {
       const newUtilities = {

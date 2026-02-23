@@ -20,7 +20,7 @@ const SemanticCategorizer = ({ skills, onCategorized }: SemanticCategorizerProps
     const categorizeSkills = async () => {
       try {
         // Call server API for semantic categorization
-        const response = await fetch('/api/semantic-categorize', {
+        const response = await fetch('/api/skills/categorize', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

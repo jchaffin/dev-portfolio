@@ -1,1 +1,27 @@
-{}
+{
+  "version": 2,
+  "crons": [
+    {
+      "path": "/api/cron/ingest",
+      "schedule": "0 4 * * *"
+    }
+  ],
+  "functions": {
+    "api/cron/**": {
+      "memory": 1024,
+      "maxDuration": 300
+    },
+    "api/skills/**": {
+      "memory": 1536,
+      "maxDuration": 60
+    },
+    "api/rag/**": {
+      "memory": 1024,
+      "maxDuration": 30
+    },
+    "api/**": {
+      "memory": 512,
+      "maxDuration": 10
+    }
+  }
+}

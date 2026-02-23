@@ -7,13 +7,17 @@ import ThemeToggle from './ThemeToggle'
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  const navItems = ['About', 'Skills', 'Projects', 'Voice', 'Resume', 'Contact']
+  const navItems = ['About', 'Projects', 'Skills', 'Voice', 'Resume', 'Contact']
+
+  const getNavId = (item: string) => {
+    return item.toLowerCase();
+  };
 
   const handleNavClick = (item: string) => {
     setIsMenuOpen(false)
     // Small delay to allow menu to close before scrolling
     setTimeout(() => {
-      document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' })
+      document.getElementById(getNavId(item))?.scrollIntoView({ behavior: 'smooth' })
     }, 100)
   }
 
@@ -47,7 +51,7 @@ const Navigation = () => {
                 {navItems.map((item) => (
                   <a
                     key={item}
-                    href={`#${item.toLowerCase()}`}
+                    href={`#${getNavId(item)}`}
                     className="px-3 py-2 rounded-md text-sm text-theme-primary font-medium transition-colors nav-link"
                   >
                     {item}

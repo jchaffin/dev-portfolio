@@ -4,25 +4,14 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { Github, ExternalLink } from 'lucide-react'
 import { getProjects, Project } from '@/lib/getProjects'
-import { LOCAL_PROJECTS } from '@/lib/constants'
 
 export default function ProjectsSection() {
   const [projects, setProjects] = useState<Project[] | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    getProjects().then((githubProjects) => {
-      let merged: Project[] = githubProjects.slice(0, 5);
-      if (merged.length < 5) {
-        const existingTitles = new Set(merged.map((p: Project) => p.title));
-        for (const local of LOCAL_PROJECTS) {
-          if (merged.length >= 5) break;
-          if (!existingTitles.has(local.title)) {
-            merged.push(local);
-          }
-        }
-      }
-      if (isMounted) setProjects(merged);
+    getProjects().then((repos) => {
+      if (isMounted) setProjects(repos.slice(0, 6));
     });
     return () => { isMounted = false; };
   }, []);
@@ -59,46 +48,67 @@ export default function ProjectsSection() {
   )
 }
 
-/* ProjectCard
- This component is responsible for displaying a single project card.
- It is used to display a single project card in the projects section. */
 const ProjectCard = ({ project, index }: { project: Project, index: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 50 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, delay: index * 0.1 }}
-    className="glass rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+    className="glass rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col"
   >
-    <div className="p-4">
+    {project.image && (
+      <a
+        href={project.live || project.github}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block relative h-48 overflow-hidden bg-theme-tertiary"
+      >
+        <img
+          src={project.image}
+          alt={`${project.title} preview`}
+          className="w-full h-full object-cover object-top transition-transform duration-300 hover:scale-105"
+        />
+        {project.featured && (
+          <span className="absolute top-3 right-3 px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/90 text-white backdrop-blur-sm">
+            Featured
+          </span>
+        )}
+      </a>
+    )}
+
+    <div className="p-4 flex flex-col flex-1">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-theme-primary">
           {project.title}
         </h3>
         <div className="flex space-x-2">
-          <a 
-            href={project.github} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-theme-secondary hover:text-blue-600 transition-colors"
-          >
-            <Github size={20} />
-          </a>
-          <a 
-            href={project.live} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-theme-secondary hover:text-blue-600 transition-colors"
-          >
-            <ExternalLink size={20} />
-          </a>
+          {project.github && (
+            <a
+              href={project.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-theme-secondary hover:text-blue-600 transition-colors"
+            >
+              <Github size={20} />
+            </a>
+          )}
+          {project.live && (
+            <a
+              href={project.live}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-theme-secondary hover:text-blue-600 transition-colors"
+            >
+              <ExternalLink size={20} />
+            </a>
+          )}
         </div>
       </div>
-      <p className="mb-4 text-theme-secondary">
+      <p className="mb-4 text-theme-secondary flex-1">
         {project.description}
       </p>
       <div className="flex flex-wrap gap-2">
         {project.tech.map((tech: string, i: number) => (
-          <span 
+          <span
             key={i}
             className="px-3 py-1 rounded-full text-sm bg-theme-tertiary text-theme-secondary"
           >

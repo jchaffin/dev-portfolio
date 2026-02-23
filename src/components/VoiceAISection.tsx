@@ -1,646 +1,162 @@
-'use client'
+'use client';
 
-import React, { useRef, useState, useEffect } from 'react'
-import { motion } from 'motion/react'
-import { Activity, FileText, Volume2, Repeat, Filter, Send, ChevronDown, X } from 'lucide-react'
-import CalendlyModal from './CalendlyModal'
-// Removed CopilotKit imports - using voice agent only
-import { experiences, skills } from '@/data/portfolio'
-import { getProjects, type Project } from '@/lib/getProjects'
-import resumeData from '@/data/resume.json'
-import ReactMarkdown from "react-markdown";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
 
-// Types
-import { SessionStatus, PortfolioContext } from "@/types";
-import { VOICE_AI_CONSTANTS } from "@/lib/constants";
+// Data imports
+import { experiences, skills as portfolioSkills } from '@/data/portfolio';
+import { getProjects, type Project } from '@/lib/getProjects';
+import { getDynamicSkills } from '@/lib/skills';
+import resumeData from '@/data/resume.json';
+import type { Skill } from '@/types';
 
-import { EventProvider } from "@/contexts/EventContext";
-import { useTranscript, TranscriptProvider } from '@/contexts/TranscriptContext'
-import { useRealtimeSession } from "@/hooks/useRealtimeSession";
+// Types & Constants
+import type { PortfolioContext } from '@/types';
+import { VOICE_AI_CONSTANTS } from '@/lib/constants';
 
-// Agent configs
-import { meAgent } from "@/agents/MeAgent";
+// Context providers from voicekit
+import { EventProvider, TranscriptProvider, SuggestionProvider } from '@jchaffin/voicekit';
 
-import useAudioDownload from "@/hooks/useAudioDownload";
+// Voice components
+import {
+  SuggestionChips,
+  DEFAULT_SUGGESTIONS,
+  ContextPills,
+  PlayButton,
+  VoiceTranscript,
+  ChatInput,
+  InlineContactForm,
+  VoiceFeatureGrid,
+  AnimatedBackground,
+} from './voice';
 
-// Error Boundary for CopilotKit
-class CopilotErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
+// Other components
+import CalendlyModal from './CalendlyModal';
 
-  static getDerivedStateFromError(_: Error) {
-    return { hasError: true };
-  }
+// Hook
+import { useVoiceAgent } from '@/hooks/useVoiceAgent';
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.warn('CopilotKit Error (non-critical):', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      // Render without CopilotKit if there's an error
-      return this.props.children;
-    }
-
-    return this.props.children;
-  }
-}
-
-// Voice AI Section - Using voice agent only
+// Main section wrapper with providers
 const VoiceAISection = () => {
   return (
     <EventProvider>
       <TranscriptProvider>
-        <VoiceAIContent />
+        <SuggestionProvider>
+          <VoiceAIContent />
+        </SuggestionProvider>
       </TranscriptProvider>
     </EventProvider>
   );
-}
+};
 
+// Main content component
 const VoiceAIContent = () => {
   // Dynamic projects state
-  const [projects, setProjects] = useState<Project[]>([])
-  
-  // Copilot modals state
-  const [contactFormOpen, setContactFormOpen] = useState(false)
-  const [calendlyModalOpen, setCalendlyModalOpen] = useState(false)
-  const [contactFormData, setContactFormData] = useState<{subject?: string, context?: string}>({})
-  const [formSubmissionState, setFormSubmissionState] = useState<{
-    name: string,
-    email: string,
-    subject: string,
-    message: string,
-    isSubmitting: boolean,
-    submitStatus: 'idle' | 'success' | 'error'
-  }>({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-    isSubmitting: false,
-    submitStatus: 'idle'
-  })
-  const [calendlyData, setCalendlyData] = useState<{url: string, details?: {type: string, duration: string}}>({url: ''})
-  const [showCommandDrawer, setShowCommandDrawer] = useState<boolean>(false)
+  const [projects, setProjects] = useState<Project[]>([]);
+  // Categorized skills state
+  const [skills, setSkills] = useState<Skill[]>(portfolioSkills);
 
-  // Voice agent UI control handlers - triggered by agent tool responses
-  const handleAgentUIAction = (toolName: string, response: any) => {
-    console.log("Voice agent triggered UI action:", { toolName, response });
-    
-    if (toolName === 'send_email' && response.success && response.action === 'show_contact_form') {
-      setContactFormData({
-        subject: response.form_data?.subject || '',
-        context: response.form_data?.context || ''
-      });
-      setContactFormOpen(true);
-    } else if (toolName === 'set_meeting' && response.success && response.action === 'open_calendly') {
-      setCalendlyData({
-        url: response.calendly_url,
-        details: response.meeting_details
-      });
-      setCalendlyModalOpen(true);
-    }
-  };
-
-  // Handle contact form submission
-  const handleContactFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormSubmissionState(prev => ({ ...prev, isSubmitting: true }));
-    
-    try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formSubmissionState.name,
-          email: formSubmissionState.email,
-          subject: formSubmissionState.subject,
-          message: formSubmissionState.message
-        })
-      });
-      
-      if (response.ok) {
-        setFormSubmissionState(prev => ({ 
-          ...prev, 
-          submitStatus: 'success',
-          isSubmitting: false 
-        }));
-        setTimeout(() => {
-          setContactFormOpen(false);
-          setFormSubmissionState({
-            name: '',
-            email: '',
-            subject: '',
-            message: '',
-            isSubmitting: false,
-            submitStatus: 'idle'
-          });
-        }, 2000);
-      } else {
-        setFormSubmissionState(prev => ({ 
-          ...prev, 
-          submitStatus: 'error',
-          isSubmitting: false 
-        }));
-      }
-    } catch (error) {
-      console.error('Error sending email:', error);
-      setFormSubmissionState(prev => ({ 
-        ...prev, 
-        submitStatus: 'error',
-        isSubmitting: false 
-      }));
-    }
-  };
-
-  const handleFormInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormSubmissionState(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  // Listen for voice agent tool responses
+  // Fetch dynamic projects and categorized skills
   useEffect(() => {
-    const handleToolResponse = (event: any) => {
-      if (event.detail && event.detail.type === 'agent_tool_end') {
-        const { name, output } = event.detail;
-        if (name === 'send_email' || name === 'set_meeting') {
-          handleAgentUIAction(name, output);
+    const loadData = async () => {
+      const githubProjects = await getProjects();
+      setProjects(githubProjects);
+      
+      // Get semantic categories for skills
+      try {
+        const initialSkills = getDynamicSkills(portfolioSkills, githubProjects);
+        const response = await fetch('/api/skills/categorize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ skills: initialSkills }),
+        });
+        if (response.ok) {
+          const { categorizedSkills } = await response.json();
+          setSkills(categorizedSkills);
         }
+      } catch {
+        // Keep using portfolioSkills on error
       }
     };
-
-    window.addEventListener('agent-tool-response', handleToolResponse);
-    return () => window.removeEventListener('agent-tool-response', handleToolResponse);
+    loadData();
   }, []);
 
-  // Fetch dynamic projects
-  useEffect(() => {
-    getProjects().then(setProjects);
-  }, []);
-
-  // Removed hardcoded RAG warm-up to avoid assumptions
-
-  // Portfolio data for context - fully dynamic from resume and GitHub
+  // Portfolio data for context (uses categorized skills from state)
   const portfolioContext: PortfolioContext = {
     experiences: experiences as any,
-    projects: projects as any, // Dynamic projects from GitHub API
-    skills: skills.slice(0, VOICE_AI_CONSTANTS.TOP_SKILLS_COUNT) as any, // Dynamic skills from resume
-    summary: resumeData.summary, // Dynamic summary from resume
+    projects: projects as any,
+    skills: skills.slice(0, VOICE_AI_CONSTANTS.TOP_SKILLS_COUNT) as any,
+    summary: resumeData.summary,
     resume: {
       workExperience: experiences as any,
       technicalSkills: skills as any,
       projects: projects as any,
-      summary: resumeData.summary // Dynamic summary from resume
+      summary: resumeData.summary,
     },
-    // Complete resume data
     completeResume: {
       summary: resumeData.summary,
       skills: resumeData.skills as any,
       experience: resumeData.experience as any,
       education: resumeData.education as any,
       contact: resumeData.contact,
-    }
-  }
-  const { transcriptItems, clearTranscript } = useTranscript();
+    },
+  };
 
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
-
-  const sdkAudioElement = React.useMemo(() => {
-    if (typeof window === 'undefined') return undefined;
-    const el = document.createElement('audio');
-    el.autoplay = true;
-    el.style.display = 'none';
-    el.volume = 1.0; // Ensure volume is set
-    document.body.appendChild(el);
-    console.log("🎵 Audio element created:", el);
-    return el;
-  }, []);
-
-  const [sessionStatus, setSessionStatus] =
-    useState<SessionStatus>("DISCONNECTED");
-
-  const [microphoneStream, setMicrophoneStream] = useState<MediaStream | null>(null);
-
-  // Attach SDK audio element once it exists (after first render in browser)
-  useEffect(() => {
-    if (sdkAudioElement && !audioElementRef.current) {
-      audioElementRef.current = sdkAudioElement;
-      console.log("🎵 Audio element attached to ref:", sdkAudioElement);
-      
-      // Add event listeners to debug audio
-      sdkAudioElement.addEventListener('loadedmetadata', () => {
-        console.log("Audio metadata loaded");
-      });
-      
-      sdkAudioElement.addEventListener('play', () => {
-        console.log("Audio started playing");
-      });
-      
-      sdkAudioElement.addEventListener('pause', () => {
-        console.log("Audio paused");
-      });
-      
-      sdkAudioElement.addEventListener('error', (e) => {
-        console.error("Audio error:", e);
-      });
-    }
-  }, [sdkAudioElement]);
-
-
-
-  // Initialize agent selection from URL parameters
-  useEffect(() => {
-    // Agent selection initialization logic can be added here if needed
-  }, []);
-
+  // Voice agent hook
   const {
-    connect,
-    disconnect,
-    mute,
-    sendEvent,
-    sendUserText,
-  } = useRealtimeSession({
-    onConnectionChange: (s) => {
-      console.log("🔄 Session status changed:", s);
-      setSessionStatus(s as SessionStatus);
-    },
-  });
+    sessionStatus,
+    transcriptItems,
+    toggleConnection,
+    sendMessage,
+    resetChat,
+    contactFormOpen,
+    setContactFormOpen,
+    calendlyModalOpen,
+    setCalendlyModalOpen,
+    contactFormData,
+    calendlyData,
+    agentSuggestions,
+    handleSuggestionClick,
+  } = useVoiceAgent({ portfolioContext });
 
-  const [isAudioPlaybackEnabled, setIsAudioPlaybackEnabled] = useState<boolean>(
-    () => {
-      if (typeof window === 'undefined') return true;
-      const stored = localStorage.getItem('audioPlaybackEnabled');
-      return stored ? stored === 'true' : true;
-    },
-  );
+  // Ref for auto-scrolling transcript container
+  const transcriptContainerRef = useRef<HTMLDivElement>(null);
+  const userScrolledUp = useRef(false);
 
-  const { startRecording, stopRecording } = useAudioDownload();
-  
-  const sendClientEvent = (eventObj: any, eventNameSuffix = "") => {
-    try {
-      sendEvent(eventObj);
-    } catch (err) {
-      console.error('Failed to send via SDK', err);
-    }
-  };
-
-  const fetchEphemeralKey = async (): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.ephemeralKey || null;
-    } catch {
-      return null;
-    }
-  };
-
-  const connectToRealtime = async () => {
-    if (sessionStatus === "CONNECTED" || sessionStatus === "CONNECTING") {
-      return;
-    }
-
-    try {
-      // Clear previous transcript on fresh connect
-      clearTranscript();
-      console.log("Fetching ephemeral key...");
-      const ephemeralKey = await fetchEphemeralKey();
-      if (!ephemeralKey) {
-        console.error("No ephemeral key received");
-        return;
-      }
-      console.log("Ephemeral key received successfully");
-
-      const sdkAudioElement = audioElementRef.current;
-      console.log("AGENT NAMES:", [meAgent.name]);
-      console.log("Audio element for connection:", sdkAudioElement);
-      
-      if (!sdkAudioElement) {
-        throw new Error("Audio element not available");
-      }
-      
-      await connect({
-        getEphemeralKey: () => Promise.resolve(ephemeralKey),
-        initialAgents: [meAgent],
-        audioElement: sdkAudioElement,
-        extraContext: {
-          portfolio: portfolioContext,
-        },
-        outputGuardrails: [],
-      });
-      console.log("CONNECTION SUCCESSFUL - Agent connected");
-      
-      // Trigger initial greeting after connection is established
-      setTimeout(() => {
-        console.log("🎤 Triggering initial greeting");
-        sendClientEvent({ type: "response.create" });
-      }, 1000);
-      
-    } catch (error) {
-      console.error("Connection failed:", error);
-      console.error("Connection error details:", {
-        sessionStatus,
-        audioElement: sdkAudioElement ? "present" : "missing",
-        error
-      });
-    }
-  };
-
-  const disconnectFromRealtime = async () => {
-    console.log("Starting disconnect process...");
-    
-    // First, stop the active microphone stream
-      if (microphoneStream) {
-      console.log("Stopping microphone stream...");
-      try {
-        // Stop all tracks and disable them
-        microphoneStream.getTracks().forEach(track => {
-          console.log("Stopping microphone track:", track.kind, track.id);
-          track.stop();
-          track.enabled = false;
-        });
-        
-        // Clear the stream reference
-        setMicrophoneStream(null);
-        console.log("Microphone stream stopped successfully");
-      } catch (error) {
-        console.error("Error stopping microphone stream:", error);
-      }
-    }
-    
-    // Stop any recording that might be active
-    try {
-      stopRecording();
-      console.log("Recording stopped");
-    } catch (error) {
-      console.error("Error stopping recording:", error);
-    }
-
-    // Immediately clear any audio element streams
-    try {
-      if (audioElementRef.current) {
-        const src = audioElementRef.current.srcObject as MediaStream | null;
-        audioElementRef.current.srcObject = null;
-        if (src) {
-          src.getTracks().forEach((t) => { try { t.stop(); } catch { /* no-op */ } });
-        }
-        try { audioElementRef.current.pause(); } catch { /* no-op */ }
-      }
-    } catch { /* no-op */ }
-
-    // Force-release microphone by acquiring and immediately stopping a fresh stream
-    try {
-      const tmp = await navigator.mediaDevices.getUserMedia({ audio: true });
-      tmp.getTracks().forEach((t) => { try { t.stop(); } catch { /* no-op */ } });
-    } catch { /* ignore */ }
-    
-    // Disconnect from the realtime session
-    try {
-      await disconnect();
-      console.log("Realtime session disconnected");
-    } catch (error) {
-      console.error('Error disconnecting from realtime session:', error);
-    } finally {
-      setSessionStatus("DISCONNECTED");
-      console.log("🧹 Disconnect process completed");
-    }
-  };
-
-  const sendSimulatedUserMessage = (text: string) => {
-    const id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-
-    sendClientEvent({
-      type: 'conversation.item.create',
-      item: {
-        id,
-        type: 'message',
-        role: 'user',
-        content: [{ type: 'input_text', text }],
-      },
-    });
-    sendClientEvent({ type: 'response.create' }, '(simulated user text message)');
-  };
-
-  const updateSession = (shouldTriggerResponse: boolean = false) => {
-    // Use server-side voice activity detection for continuous listening
-    const turnDetection = { type: "server_vad" as const };
-
-    sendClientEvent({
-      type: "session.update",
-      session: {
-        turn_detection: turnDetection,
-        audio_playback: {
-          mode: isAudioPlaybackEnabled ? "enabled" : "disabled",
-        },
-      },
-    });
-
-    if (shouldTriggerResponse) {
-      sendClientEvent({ type: "response.create" });
-    }
-  };
-
-
-  // Removed talk button functionality - using continuous listening instead
-
-  const onToggleConnection = async () => {
-    if (sessionStatus === "CONNECTED") {
-      await disconnectFromRealtime();
-    } else {
-      // Ensure audio element is ready for autoplay; SDK will request mic
-      if (sdkAudioElement) {
-        sdkAudioElement.muted = false;
-        sdkAudioElement.volume = 1.0;
-        console.log("🎵 Audio element prepared for autoplay");
-      }
-      connectToRealtime();
-    }
-  };
-
+  // Track if user manually scrolled up
   useEffect(() => {
-    const storedAudioPlaybackEnabled = localStorage.getItem(
-      "audioPlaybackEnabled"
-    );
-    if (storedAudioPlaybackEnabled) {
-      setIsAudioPlaybackEnabled(storedAudioPlaybackEnabled === "true");
-    }
+    const container = transcriptContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+      userScrolledUp.current = !isAtBottom;
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Auto-scroll to bottom when new messages arrive (only if user hasn't scrolled up)
   useEffect(() => {
-    localStorage.setItem(
-      "audioPlaybackEnabled",
-      isAudioPlaybackEnabled.toString()
-    );
-  }, [isAudioPlaybackEnabled]);
-
-  useEffect(() => {
-    if (audioElementRef.current) {
-      console.log("🔊 Audio playback setting:", isAudioPlaybackEnabled);
-      if (isAudioPlaybackEnabled) {
-        audioElementRef.current.muted = false;
-        audioElementRef.current.volume = 1.0;
-        audioElementRef.current.play().catch((err) => {
-          console.warn("Autoplay may be blocked by browser:", err);
-        });
-        console.log("🔊 Audio unmuted and playing");
-      } else {
-        // Mute and pause to avoid brief audio blips before pause takes effect.
-        audioElementRef.current.muted = true;
-        audioElementRef.current.pause();
-        console.log("Audio muted and paused");
-      }
+    if (transcriptContainerRef.current && transcriptItems.length > 0 && !userScrolledUp.current) {
+      const container = transcriptContainerRef.current;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
     }
-
-    // Toggle server-side audio stream mute so bandwidth is saved when the
-    // user disables playback. 
-    try {
-      mute(!isAudioPlaybackEnabled);
-    } catch {
-    }
-  }, [isAudioPlaybackEnabled, mute]);
-
-  useEffect(() => {
-    if (sessionStatus === 'CONNECTED') {
-      try {
-        mute(!isAudioPlaybackEnabled);
-      } catch {
-      }
-    }
-  }, [sessionStatus, isAudioPlaybackEnabled, mute]);
-
-  useEffect(() => {
-    if (sessionStatus === "CONNECTED" && audioElementRef.current?.srcObject) {
-      // The remote audio stream from the audio element.
-      const remoteStream = audioElementRef.current.srcObject as MediaStream;
-      startRecording(remoteStream);
-    }
-
-    // Only stop recording when session is disconnecting
-    if (sessionStatus === "DISCONNECTED") {
-      stopRecording();
-      // Ensure microphone stream is fully released on any disconnect path
-      if (microphoneStream) {
-        try {
-          microphoneStream.getTracks().forEach((track) => {
-            track.stop();
-            track.enabled = false;
-          });
-        } catch {
-          // no-op
-        } finally {
-          setMicrophoneStream(null);
-        }
-      }
-
-      // Also clear any srcObject on the audio element
-      if (audioElementRef.current) {
-        try {
-          const src = audioElementRef.current.srcObject as MediaStream | null;
-          audioElementRef.current.srcObject = null;
-          if (src) {
-            src.getTracks().forEach((t) => {
-              try { t.stop(); } catch { /* no-op */ }
-            });
-          }
-        } catch { /* no-op */ }
-        try { audioElementRef.current.pause(); } catch { /* no-op */ }
-      }
-
-      // Final fallback removed to avoid re-acquiring the mic in effects
-    }
-  }, [sessionStatus, startRecording, stopRecording, microphoneStream]);
-
-  
-  // Cleanup on component unmount
-  useEffect(() => {
-    return () => {
-      console.log("Component unmounting, cleaning up...");
-      
-      // Stop recording
-      stopRecording();
-      
-      if (microphoneStream) {
-        microphoneStream.getTracks().forEach(track => {
-          track.stop();
-        });
-        setMicrophoneStream(null);
-      }
-      
-      if (sessionStatus === "CONNECTED") {
-        console.log("CLEANUP - Disconnecting session on component unmount");
-        disconnect().catch(error => {
-          console.error('Error during cleanup disconnect:', error);
-        });
-      }
-    };
-  }, []); // Empty dependency array - only run on unmount
-
-  // Chat input state for sending text to the voice agent
-  const [chatInput, setChatInput] = useState<string>("");
-
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    const text = chatInput.trim();
-    if (!text) return;
-
-    if (sessionStatus === "CONNECTED") {
-      try {
-        // Prefer SDK helper which creates a conversation item and triggers a response
-        sendUserText(text);
-      } catch {
-        // Fallback to manual event creation if needed
-        sendSimulatedUserMessage(text);
-      }
-      setChatInput("");
-    }
-  };
+  }, [transcriptItems]);
 
   return (
-    <section id="voice" className="py-20 bg-gradient-primary dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 opacity-10">
-        <motion.div
-          className="absolute top-20 left-20 w-32 h-32 bg-accent-secondary rounded-full blur-xl"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        <motion.div
-          className="absolute bottom-20 right-20 w-24 h-24 bg-accent-primary rounded-full blur-xl"
-          animate={{
-            x: [0, -80, 0],
-            y: [0, 60, 0],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 2
-          }}
-        />
-      </div>
+    <section
+      id="voice"
+      className="py-20 bg-gradient-primary dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 relative overflow-hidden"
+    >
+      <AnimatedBackground />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -649,7 +165,7 @@ const VoiceAIContent = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-6xl font-bold mb-6 text-primary">
-          Voice Agent
+            Voice Agent
           </h2>
           <p className="text-xl text-secondary max-w-3xl mx-auto">
             Realtime Conversational AI.
@@ -664,324 +180,143 @@ const VoiceAIContent = () => {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="w-full flex justify-center"
         >
-          <div className="w-full max-w-4xl bg-blue-400 glass rounded-xl border border-theme-primary/30 overflow-hidden shadow-lg">
-            {/* Header */}
-            <div className="bg-transparent backdrop-blur-xl p-6 border-b border-theme-primary/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${sessionStatus === 'CONNECTED' ? 'bg-accent-success' : 'bg-accent-error'} animate-pulse`}></div>
+          <div className="w-full max-w-4xl bg-theme-secondary glass rounded-xl border border-theme-primary/30 overflow-hidden shadow-lg">
+            {/* Header - shows when connected or has transcript */}
+            {(sessionStatus === 'CONNECTED' || transcriptItems.length > 0) && (
+              <div className="flex items-center justify-between px-4 py-2 border-b border-theme-primary/20">
+                <div className="flex items-center gap-2">
+                  {sessionStatus === 'CONNECTED' ? (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                        Live
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-slate-400" />
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        Session Ended
+                      </span>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={onToggleConnection}
-                    className={`text-xs font-medium transition-all duration-300 cursor-pointer ${
-                      sessionStatus === 'CONNECTED' 
-                        ? 'text-red-500 hover:text-red-400' 
-                        : 'text-blue-500 hover:text-blue-400'
-                    }`}
-                  >
-                    {sessionStatus === 'CONNECTED' ? 'Disconnect' : 'Connect'}
-                  </button>
+                  {transcriptItems.length > 0 && (
+                    <button
+                      onClick={resetChat}
+                      className="text-xs text-indigo-500 hover:text-indigo-400 font-medium cursor-pointer transition-colors"
+                    >
+                      New Chat
+                    </button>
+                  )}
+                  {sessionStatus === 'CONNECTED' ? (
+                    <button
+                      onClick={toggleConnection}
+                      className="text-xs text-red-500 hover:text-red-400 font-medium cursor-pointer transition-colors"
+                    >
+                      End Session
+                    </button>
+                  ) : (
+                    <button
+                      onClick={toggleConnection}
+                      className="text-xs text-green-500 hover:text-green-400 font-medium cursor-pointer transition-colors"
+                    >
+                      Reconnect
+                    </button>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
+
             {/* Voice Conversation Messages */}
-            <div className="h-96 overflow-y-auto p-6">
-              <div className="flex flex-col gap-y-4">
+            <div
+              ref={transcriptContainerRef}
+              className={`${
+                sessionStatus === 'CONNECTED' ? 'h-72' : 'h-80'
+              } overflow-y-auto p-6`}
+            >
+              <div className="flex flex-col h-full gap-y-4">
                 {transcriptItems.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-theme-secondary">
-                    <div className="text-center">
-                      <p className="mb-2">Connect to Assistant</p>
-                      <p className="text-sm">The AI can help you learn about Jacob's work and even open contact forms or schedule meetings!</p>
-                    </div>
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <PlayButton
+                      sessionStatus={sessionStatus}
+                      onToggle={toggleConnection}
+                    />
+
+                    <p className="text-sm text-theme-secondary text-center mb-4">
+                      {sessionStatus === 'CONNECTING'
+                        ? 'Connecting...'
+                        : sessionStatus === 'CONNECTED'
+                          ? 'Connected! Waiting for response...'
+                          : 'Click to start, or choose an option below'}
+                    </p>
+
+                    {/* Show suggestions as chips when disconnected */}
+                    {sessionStatus === 'DISCONNECTED' && (
+                      <SuggestionChips
+                        suggestions={DEFAULT_SUGGESTIONS}
+                        onSelect={handleSuggestionClick}
+                        variant="default"
+                      />
+                    )}
                   </div>
                 ) : (
-                  transcriptItems
-                    .filter(item => item.type === "MESSAGE" && !item.isHidden)
-                    .sort((a, b) => a.createdAtMs - b.createdAtMs)
-                    .map((item) => {
-                      const isUser = item.role === "user";
-                      const title = item.title || "";
-                      const displayTitle = title.startsWith("[") && title.endsWith("]") 
-                        ? title.slice(1, -1) 
-                        : title;
-
-                      return (
-                        <div key={item.itemId} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-                          <div className={`max-w-lg p-3 rounded-xl ${
-                            isUser 
-                              ? "bg-accent-secondary text-white" 
-                              : "bg-theme-tertiary text-theme-primary"
-                          }`}>
-                            <div className={`text-xs font-mono mb-1 ${
-                              isUser ? "text-white/80" : "text-theme-secondary"
-                            }`}>
-                              {item.timestamp}
-                            </div>
-                            <div className="whitespace-pre-wrap">
-                              <ReactMarkdown>{displayTitle}</ReactMarkdown>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
+                  <VoiceTranscript items={transcriptItems} />
                 )}
               </div>
             </div>
-            {/* Voice Commands Drawer */}
-            {sessionStatus === 'CONNECTED' && !contactFormOpen && (
-              <div className="px-6">
-                <div className="rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => setShowCommandDrawer(v => !v)}
-                    className={`w-full flex items-center justify-between bg-theme-tertiary px-4 py-2 cursor-pointer border border-theme-secondary ${showCommandDrawer ? 'rounded-t-lg border-b-0' : 'rounded-lg'}`}
-                    aria-label={showCommandDrawer ? 'Collapse voice commands' : 'Expand voice commands'}
-                  >
-                    <span className="text-sm font-semibold text-theme-primary">Voice commands</span>
-                    <ChevronDown className={`h-4 w-4 text-theme-secondary transition-transform ${showCommandDrawer ? 'rotate-180' : ''}`} />
-                  </button>
-                  {showCommandDrawer && (
-                    <div className="bg-theme-tertiary border border-theme-secondary border-t-0 rounded-b-lg p-4">
-                      <div className="flex justify-end mb-2">
-                        <button
-                          onClick={() => setShowCommandDrawer(false)}
-                          className="text-theme-secondary hover:text-theme-primary cursor-pointer"
-                          aria-label="Close commands"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                          onClick={() => {
-                            setContactFormData({ subject: '', context: '' });
-                            setContactFormOpen(true);
-                          }}
-                          className="flex-1 flex items-center gap-3 p-3 bg-accent-secondary hover:bg-accent-secondary/80 text-white rounded-lg transition-colors cursor-pointer"
-                        >
-                          <FileText className="h-5 w-5" />
-                          <div className="text-left">
-                            <div className="font-medium">Send Email</div>
-                            <div className="text-sm opacity-90">Say "I want to contact Jacob"</div>
-                          </div>
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            setCalendlyData({
-                              url: 'https://calendly.com/jacobchaffin',
-                              details: { type: 'general', duration: '30min' }
-                            });
-                            setCalendlyModalOpen(true);
-                          }}
-                          className="flex-1 flex items-center gap-3 p-3 bg-accent-primary hover:opacity-90 text-white rounded-lg transition-colors cursor-pointer"
-                        >
-                          <Activity className="h-5 w-5" />
-                          <div className="text-left">
-                            <div className="font-medium">Schedule Meeting</div>
-                            <div className="text-sm opacity-90">Say "I want to schedule a meeting"</div>
-                          </div>
-                        </button>
-                      </div>
-                      <p className="text-sm text-theme-secondary mt-3 text-center">
-                        Ask me anything about Jacob's work, or request actions using voice commands!
-                      </p>
-                    </div>
-                  )}
-                </div>
+
+            {/* Context Pills - Show when connected and conversation started */}
+            {sessionStatus === 'CONNECTED' && !contactFormOpen && transcriptItems.length > 0 && (
+              <div className="px-6 py-2">
+                <ContextPills
+                  skills={skills.map(s => ({
+                    id: s.name.toLowerCase().replace(/\s+/g, '-'),
+                    name: s.name,
+                    category: s.category,
+                  }))}
+                  projects={projects.map(p => ({
+                    id: p.title.toLowerCase().replace(/\s+/g, '-'),
+                    name: p.title,
+                    description: p.description,
+                  }))}
+                  experiences={experiences.map(e => ({
+                    id: e.company.toLowerCase().replace(/\s+/g, '-'),
+                    company: e.company,
+                    role: e.position,
+                  }))}
+                  onSelect={handleSuggestionClick}
+                  activeContext={
+                    agentSuggestions?.type === 'skill' ? 'skills' :
+                    agentSuggestions?.type === 'project' ? 'projects' :
+                    agentSuggestions?.type === 'experience' ? 'experience' :
+                    null
+                  }
+                />
               </div>
             )}
 
-            {/* Text Chat Input (hidden until connected) */}
+            {/* Chat Input OR Contact Form */}
             {sessionStatus === 'CONNECTED' && (
-            <div className="px-6 pb-6 pt-4">
-              <form onSubmit={handleSendChat} className="flex items-center gap-3">
-                <div className="flex-1 bg-theme-tertiary rounded-lg h-12 flex items-center px-3 border border-theme-secondary/60">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder={sessionStatus === 'CONNECTED' ? 'Type a message to the voice agent…' : 'Connect first to chat'}
-                    disabled={sessionStatus !== 'CONNECTED'}
-                    className="w-full bg-transparent text-theme-primary placeholder-theme-secondary/70 focus:outline-none disabled:opacity-50"
-                    aria-label="Chat message input"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!chatInput.trim() || sessionStatus !== 'CONNECTED'}
-                  className="h-12 w-12 rounded-lg bg-theme-tertiary text-theme-secondary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer flex items-center justify-center border border-theme-secondary/60"
-                  aria-label="Send message"
-                >
-                  <Send className="w-6 h-6" />
-                </button>
-              </form>
-            </div>
+              contactFormOpen ? (
+                <InlineContactForm
+                  onClose={() => setContactFormOpen(false)}
+                  initialSubject={contactFormData.subject}
+                />
+              ) : (
+                <ChatInput
+                  onSend={sendMessage}
+                  disabled={sessionStatus !== 'CONNECTED'}
+                  placeholder="Type a message to the voice agent…"
+                />
+              )
             )}
-
-            {/* Inline Contact Form */}
-            {contactFormOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="mt-6 p-6 bg-theme-tertiary border border-theme-secondary rounded-lg"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-theme-primary">Contact Jacob</h3>
-                  <button
-                    onClick={() => setContactFormOpen(false)}
-                    className="text-theme-secondary hover:text-theme-primary"
-                  >
-                    ×
-                  </button>
-                </div>
-                
-                <form onSubmit={handleContactFormSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-theme-primary mb-2">
-                      Your Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      value={formSubmissionState.name}
-                      onChange={handleFormInputChange}
-                      className="w-full bg-theme-primary border border-theme-secondary text-theme-primary px-3 py-2 rounded-lg text-sm"
-                      placeholder="Enter your name"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-theme-primary mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      required
-                      value={formSubmissionState.email}
-                      onChange={handleFormInputChange}
-                      className="w-full bg-theme-primary border border-theme-secondary text-theme-primary px-3 py-2 rounded-lg text-sm"
-                      placeholder="your@email.com"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-theme-primary mb-2">
-                      Subject
-                    </label>
-                    <input
-                      type="text"
-                      name="subject"
-                      value={formSubmissionState.subject}
-                      onChange={handleFormInputChange}
-                      className="w-full bg-theme-primary border border-theme-secondary text-theme-primary px-3 py-2 rounded-lg text-sm"
-                      placeholder="What's this about?"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-theme-primary mb-2">
-                      Message *
-                    </label>
-                    <textarea
-                      name="message"
-                      required
-                      rows={4}
-                      value={formSubmissionState.message}
-                      onChange={handleFormInputChange}
-                      className="w-full bg-theme-primary border border-theme-secondary text-theme-primary px-3 py-2 rounded-lg text-sm resize-none"
-                      placeholder="Tell Jacob what you'd like to discuss..."
-                    />
-                  </div>
-                  
-                  {formSubmissionState.submitStatus === 'success' && (
-                    <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm">
-                      ✅ Message sent successfully! We'll get back to you soon.
-                    </div>
-                  )}
-                  
-                  {formSubmissionState.submitStatus === 'error' && (
-                    <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-                      ❌ Failed to send message. Please try again.
-                    </div>
-                  )}
-                  
-                  <div className="flex gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setContactFormOpen(false)}
-                      className="flex-1 px-4 py-2 bg-theme-tertiary border border-theme-secondary text-theme-secondary rounded-lg hover:opacity-90 transition-colors text-sm cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={formSubmissionState.isSubmitting || formSubmissionState.submitStatus === 'success'}
-                      className="flex-1 px-4 py-2 bg-accent-secondary hover:bg-accent-secondary/80 text-white rounded-lg transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {formSubmissionState.isSubmitting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        'Send Message'
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            )}
-
           </div>
         </motion.div>
+
         {/* Features Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8"
-        >
-          {[
-            {
-              icon: <Volume2 className="h-6 w-6" />,
-              title: "Realtime STS",
-              description: "Sub 200ms latency STS AI with real-time voice synthesis"
-            },
-            {
-              icon: <FileText className="h-6 w-6" />,
-              title: "Retrieval Augmented Generation",
-              description: "Uses RAG to retrieve project details and code snippets"
-            },
-            {
-              icon: <Repeat className="h-6 w-6" />,
-              title: "UG-AI Protocol",
-              description: "Uses Human-in-the-loop to improve agentic systems"
-            },
-      
-          ].map((feature, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: index * 0.2 }}
-              className="glass rounded-xl p-6"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 text-blue-600 rounded-lg">
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl font-semibold text-theme-primary">{feature.title}</h3>
-              </div>
-              <p className="text-theme-secondary">{feature.description}</p>
-            </motion.div>
-          ))}
-        </motion.div>
+        <VoiceFeatureGrid />
       </div>
 
       {/* Calendly Modal */}
@@ -993,6 +328,6 @@ const VoiceAIContent = () => {
       />
     </section>
   );
-}
+};
 
-export default VoiceAISection 
+export default VoiceAISection;

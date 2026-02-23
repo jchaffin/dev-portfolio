@@ -1,9 +1,8 @@
 import { meAgent } from './MeAgent';
 
-import type { RealtimeAgent } from '@openai/agents/realtime';
+import type { VoiceAgentConfig } from '@jchaffin/voicekit';
 
-// Map of scenario key -> array of RealtimeAgent objects
-export const allAgentSets: Record<string, RealtimeAgent[]> = {
+export const allAgentSets: Record<string, VoiceAgentConfig[]> = {
   meAgent: [meAgent],
 };
 

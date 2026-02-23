@@ -22,7 +22,7 @@
   --accent-error: #ef4444;
   
   /* Light Mode Gradients */
-  --gradient-primary: linear-gradient(to bottom, #ffffff, #f8fafc);
+  --gradient-primary: linear-gradient(to bottom right, #DDEEFF, #F7F8F9);
   --gradient-secondary: linear-gradient(135deg, #f1f5f9, #e2e8f0);
   --gradient-accent: linear-gradient(135deg, #64748b, #475569);
 }
@@ -47,16 +47,17 @@ html.dark {
   --accent-error: #ef4444;
   
   /* Dark Mode Gradients */
-  --gradient-primary: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
+  --gradient-primary: linear-gradient(135deg, #0E0B16 0%, #1B1A2E 50%, #10272F 100%);
   --gradient-secondary: linear-gradient(135deg, #1e293b, #334155);
   --gradient-accent: linear-gradient(135deg, #475569, #64748b);
 }
 
 /* ===== BASE STYLES ===== */
 body {
-  background-color: var(--bg-primary);
+  background: var(--gradient-primary);
+  background-attachment: fixed;
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 /* ===== UTILITY CLASSES ===== */

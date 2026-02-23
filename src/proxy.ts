@@ -1,0 +1,50 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export function proxy(request: NextRequest) {
+  // Handle preflight requests
+  if (request.method === 'OPTIONS' && request.nextUrl.pathname.startsWith('/api/')) {
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
+  }
+
+  // Add security headers
+  const response = NextResponse.next()
+  
+  // Security headers
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  
+  // CSP header for additional security (permissive for WebRTC)
+  response.headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; \
+    style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; \
+    media-src 'self' blob:; \
+    connect-src 'self' https://api.openai.com https://*.openai.com wss://*.openai.com https://api.cloud.copilotkit.ai blob:;"
+  )
+  
+  // CORS headers for API routes
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  }
+  
+  return response
+}
+
+export const config = {
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/api/:path*'
+  ],
+}

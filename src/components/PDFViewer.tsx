@@ -4,16 +4,12 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
-
-
-
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 // Configure PDF.js worker
 if (typeof window !== 'undefined') {
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
-
 interface PDFViewerProps {
   pdfUrl: string
   title?: string

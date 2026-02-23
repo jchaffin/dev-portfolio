@@ -21,7 +21,8 @@ export const getDynamicSkills = (baseSkills: Skill[], githubProjects: ProjectFor
 
     // Count frequency in GitHub projects
     githubProjects.forEach((project) => {
-      const projectText = `${project.title} ${project.description} ${project.tech.join(' ')}`.toLowerCase();
+      const tech = Array.isArray(project.tech) ? project.tech : [];
+      const projectText = `${project.title || ''} ${project.description || ''} ${tech.join(' ')}`.toLowerCase();
 
       if (projectText.includes(skillLower)) {
         frequency += 1;
@@ -29,7 +30,7 @@ export const getDynamicSkills = (baseSkills: Skill[], githubProjects: ProjectFor
         sources.push(`GitHub Project: ${project.title}`);
       }
 
-      if (project.tech.some((tech: string) => tech.toLowerCase().includes(skillLower))) {
+      if (tech.some((t: string) => t.toLowerCase().includes(skillLower))) {
         frequency += 2;
         breakdown.projects += 2;
         sources.push(`GitHub Project Tech: ${project.title}`);
@@ -61,7 +62,8 @@ export const getDynamicSkills = (baseSkills: Skill[], githubProjects: ProjectFor
     }
 
     const maxFrequency = githubProjects.length * 3 + (resumeData.experience?.length || 0) * 3 + 3;
-    const level = Math.min(95, Math.max(70, Math.round(70 + (frequency / Math.max(maxFrequency, 1)) * 25)));
+    const computed = Math.min(95, Math.max(70, Math.round(70 + (frequency / Math.max(maxFrequency, 1)) * 25)));
+    const level = Math.max(computed, skill.level ?? 0);
 
     return {
       ...skill,

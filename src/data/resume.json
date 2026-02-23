@@ -1,41 +1,116 @@
 {
   "name":  "Jacob Chaffin",
-  "summary": "Dynamic AI Engineer with over 5 years of experience in crafting innovative web applications and AI solutions that drive user engagement and operational efficiency. Expertise lies in developing scalable platforms utilizing Node.js, React, and advanced machine learning techniques, particularly in natural language processing. Proven ability to integrate real-time data streams and enhance user interfaces for enterprise-level applications. Committed to leveraging technical acumen and collaborative skills to deliver impactful results in the field of voice AI and customer experience.",
+  "summary": "AI infrastructure engineer building agentic systems and LLM orchestration layers. 6+ years designing real-time streaming pipelines and multi-agent coordination. Expert in building autonomous AI agents that reason, plan, and execute complex workflows. Deep experience with RAG systems, vector databases, voice AI platforms, and production ML infrastructure across AWS/GCP with Kubernetes.",
   "skills": [
+    "Agentic AI",
+    "LLM Orchestration", 
+    "Voice AI",
+    "Real-time Systems",
+    "RAG Systems",
     "React",
-    "Node.js",
-    "Typescript",
     "Python",
-    "NLP",
-    "GraphQL",
-    "Rust",
-    "Conversational AI"
+    "TypeScript",
+    "Kubernetes",
+    "WebRTC"
   ],
   "experience": [
     {
       "company": "Prosody.ai",
-      "role": "Founder / Infra + Product",
+      "website": "https://www.prosodyai.app",
+      "role": "Principal AI Engineer",
       "startDate": "2024",
       "endDate": null,
       "duration": "2024 Present",
       "location": "San Francisco, CA",
       "description": "Built a real-time voice AI infrastructure platform that injects phonetic tone and emotional context into LLMs via a multimodal pipeline. Designed and deployed latency-optimized microservices for acoustic feature extraction, tone modeling, and token conditioning. Integrated WebSocket + REST APIs with Whisper, GPT-4, and LangChain agents for live sentiment augmentation. Created SDK and open API spec; deployed dashboard in Next.js and React with WebRTC and real-time charts using Recharts. Led full-stack architecture including Dockerized backend, CI/CD workflows, LLM fine-tuning, and synthetic data generation.",
       "keywords": [
-        "real-time voice AI",
-        "microservices",
-        "WebSocket",
-        "REST APIs",
-        "Whisper",
-        "GPT-4",
-        "LangChain",
-        "SDK",
+        "Python",
         "Next.js",
-        "React"
+        "WebRTC",
+        "LangChain",
+        "GPT-4",
+        "Whisper",
+        "Docker"
       ],
-      "isCurrentRole": true
+      "isCurrentRole": true,
+      "featured": true,
+      "images": "/projects/prosodyai",
+      "github": "https://github.com/jchaffin/prosody-ai"
+    },
+    {
+      "company": "Studyfetch",
+      "website": "https://www.studyfetch.com",
+      "aliases": ["Sparke", "Study Fetch"],
+      "projectName": "Sparke",
+      "role": "Senior AI Engineer",
+      "startDate": "2025",
+      "endDate": "2026",
+      "location": "Beverly Hills, CA",
+      "description": "Built a mobile tutoring app with a talking avatar powered by a LiveKit agent that ingests live audio, video, and screen-sharing tracks. Implemented backend LLM orchestration with material-level RAG, telephony, Twilio and CallKeep integration, and a Kafka-driven ELO feedback loop for study-plan progression, with authentication and token services hosted on GCP.",
+      "keywords": [
+        "React Native",
+        "LiveKit",
+        "RAG",
+        "Twilio",
+        "Kafka",
+        "GCP",
+        "Python"
+      ],
+      "isCurrentRole": false,
+      "featured": true,
+      "images": "/projects/sparke"
+    },
+    {
+      "company": "AureliaStudio.AI",
+      "website": "https://aureliastudio.ai",
+      "role": "Co-Founder & CTO",
+      "startDate": "2025",
+      "endDate": null,
+      "duration": "2025-Present",
+      "location": "San Francisco, CA",
+      "description": "AI-powered content studio for creators and beauty professionals. Built a multimodal generation pipeline combining vision, language, and audio models with an intuitive editor interface. Architected the full platform including LiveKit-powered real-time sessions, Kubernetes infrastructure on GCP, and a Next.js turborepo frontend.",
+      "keywords": [
+        "LiveKit",
+        "LangGraph",
+        "Apollo GraphQL",
+        "React Native",
+        "AWS",
+        "Kafka",
+        "Terraform",
+        "Python"
+      ],
+      "isCurrentRole": true,
+      "featured": true,
+      "images": "/projects/aureliastudio",
+      "github": "https://github.com/jchaffin/aureliastudio.ai"
+    },
+    {
+      "company": "OutRival",
+      "projectName": "Realtime Metrics Dashboard",
+      "website": "https://frontend-three-flax-30.vercel.app/",
+      "role": "Senior AI Engineer",
+      "startDate": "2026",
+      "endDate": "2026",
+      "duration": "2026",
+      "location": "Remote",
+      "description": "Built a real-time analytics dashboard for a voice AI sales platform. Designed live KPI scoring with Pinecone vector embeddings, latency monitoring across LLM/TTS/E2E pipelines, and outcome distribution tracking. Integrated Pipecat Cloud for call orchestration with streaming transcription and sentiment analysis. For a company that didn't hire me.",
+      "keywords": [
+        "Next.js",
+        "Pipecat",
+        "Pinecone",
+        "LiveKit",
+        "WebSocket",
+        "Real-time Analytics",
+        "Voice AI"
+      ],
+      "isCurrentRole": false,
+      "featured": true,
+      "images": "/projects/outrival",
+      "github": "https://github.com/jchaffin/outrival"
     },
     {
       "company": "Uniphore",
+      "website": "https://www.uniphore.com",
       "role": "Voice AI Engineer",
       "startDate": "September 2021",
       "endDate": "October 2024",
@@ -56,6 +131,7 @@
     },
     {
       "company": "Wave Computing",
+      "website": "https://en.wikipedia.org/wiki/Wave_Computing",
       "role": "Software Engineer",
       "startDate": "June 2018",
       "endDate": "September 2020",
@@ -87,9 +163,9 @@
   "contact": {
     "email": "jchaffin57@gmail.com",
     "phone": "6503803288",
-    "location": "SF Bay Area, United States",
-    "linkedin": "https://www.linkedin.com/in/jacobchaffin/",
-    "github": "https://github.com/jacobchaffin",
+    "location": "Los Angeles, CA",
+    "linkedin": "https://www.linkedin.com/in/jacob-chaffin/",
+    "github": "https://github.com/jchaffin",
     "website": "https://jacobchaffin.io "
   }
 }

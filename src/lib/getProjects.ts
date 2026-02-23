@@ -4,6 +4,10 @@ export type Project = {
   tech: string[];
   github: string;
   live: string;
+  /** Path to a cover image in /public (e.g. "/projects/sparke/1.jpeg") */
+  image?: string;
+  /** Whether this is a featured/highlighted project */
+  featured?: boolean;
 };
 
 interface GitHubRepo {

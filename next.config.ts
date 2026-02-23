@@ -1,11 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
+  // Note: eslint config moved to eslint.config.mjs in Next.js 16+
   typescript: {
     // Warning: This allows production builds to successfully complete even if
     // your project has type errors.
@@ -26,15 +22,14 @@ const nextConfig: NextConfig = {
               default-src 'self';
               script-src 'self' 'unsafe-eval' 'unsafe-inline';
               style-src 'self' 'unsafe-inline';
-              img-src 'self' data: blob:;
-              font-src 'self';
-              connect-src 'self' https://api.openai.com https://*.openai.com https://api.cloud.copilotkit.ai;
-              media-src 'self';
+              img-src 'self' data: blob: https: http:;
+              font-src 'self' data:;
+              connect-src 'self' https://api.openai.com https://*.openai.com wss://*.openai.com https://api.cloud.copilotkit.ai blob:;
+              media-src 'self' blob:;
               object-src 'none';
               base-uri 'self';
               form-action 'self';
               frame-ancestors 'none';
-              upgrade-insecure-requests;
             `.replace(/\s{2,}/g, ' ').trim()
           }
         ]

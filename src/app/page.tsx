@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react'
 import Navigation from '@/components/Navigation'
 import HeroSection from '@/components/HeroSection'
 import AboutSection from '@/components/AboutSection'
+import RecentWorkSection from '@/components/RecentWorkSection'
 import VoiceAISection from '@/components/VoiceAISection'
 import SkillsSection from '@/components/SkillsSection'
-import ProjectsSection from '@/components/ProjectsSection'
 import ResumeSection from '@/components/ResumeSection'
 import ContactSection from '@/components/ContactSection'
 import Footer from '@/components/Footer'
@@ -25,8 +25,8 @@ export default function Home() {
       <Navigation />
       <HeroSection />
       <AboutSection />
+      <RecentWorkSection />
       <VoiceAISection />
-      <ProjectsSection />
       <SkillsSection />
       <ResumeSection />
       <ContactSection />

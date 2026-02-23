@@ -35,8 +35,7 @@ const calculateSkillLevel = (skillName: string): number => {
 
   // Enforce minimum levels for key skills where real proficiency is higher
   const minimumSkillLevels: Record<string, number> = {
-    // Ensure React reflects senior-level proficiency
-    'react': 85,
+    'react': 92,
   };
 
   const minOverride = minimumSkillLevels[skillName.toLowerCase()];
@@ -45,32 +44,23 @@ const calculateSkillLevel = (skillName: string): number => {
   return Math.round(adjusted);
 };
 
-// Extract skills from resume data and map them to Skill objects
 const extractSkillsFromResume = (): Skill[] => {
   const resumeSkills = resumeData.skills || [];
-  
 
+  const skillsFromResume = resumeSkills.map(skillName => ({
+    name: skillName,
+    level: calculateSkillLevel(skillName),
+    category: 'Other',
+  }));
 
-  // Create Skill objects from resume skills with dynamic levels (no hardcoded categories)
-  const skillsFromResume = resumeSkills.map(skillName => {
-    return {
-      name: skillName,
-      level: calculateSkillLevel(skillName),
-      category: 'Other' // Will be categorized by semantic analysis
-    };
-  });
-
-  // Add additional skills from experience keywords
   const allKeywords = resumeData.experience?.flatMap(exp => exp.keywords || []) || [];
   const additionalSkills = allKeywords
     .filter(keyword => !resumeSkills.includes(keyword))
-    .map(keyword => {
-      return {
-        name: keyword,
-        level: calculateSkillLevel(keyword),
-        category: 'Other' // Will be categorized by semantic analysis
-      };
-    });
+    .map(keyword => ({
+      name: keyword,
+      level: calculateSkillLevel(keyword),
+      category: 'Other',
+    }));
 
   // Combine and remove duplicates
   const allSkills = [...skillsFromResume, ...additionalSkills];

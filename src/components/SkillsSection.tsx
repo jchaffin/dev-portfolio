@@ -131,7 +131,7 @@ const SkillsSection = () => {
         const initialSkills = getDynamicSkills(portfolioSkills, githubProjects);
         
         // Call the semantic categorization API
-        const response = await fetch('/api/semantic-categorize', {
+        const response = await fetch('/api/skills/categorize', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

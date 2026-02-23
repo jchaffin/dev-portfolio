@@ -1,0 +1,100 @@
+{
+  "name": "@jchaffin/voicekit",
+  "version": "0.2.0",
+  "description": "A provider-agnostic React library for building voice-enabled AI agents",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./openai": {
+      "types": "./dist/adapters/openai.d.ts",
+      "import": "./dist/adapters/openai.mjs",
+      "require": "./dist/adapters/openai.js"
+    },
+    "./livekit": {
+      "types": "./dist/adapters/livekit.d.ts",
+      "import": "./dist/adapters/livekit.mjs",
+      "require": "./dist/adapters/livekit.js"
+    },
+    "./deepgram": {
+      "types": "./dist/adapters/deepgram.d.ts",
+      "import": "./dist/adapters/deepgram.mjs",
+      "require": "./dist/adapters/deepgram.js"
+    },
+    "./elevenlabs": {
+      "types": "./dist/adapters/elevenlabs.d.ts",
+      "import": "./dist/adapters/elevenlabs.mjs",
+      "require": "./dist/adapters/elevenlabs.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.mjs",
+      "require": "./dist/server.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/server.ts src/adapters/openai.ts src/adapters/livekit.ts src/adapters/deepgram.ts src/adapters/elevenlabs.ts --format cjs,esm --dts --external react --external react-dom --external @openai/agents --external livekit-client --external livekit-server-sdk --external @deepgram/sdk",
+    "dev": "tsup src/index.ts src/server.ts src/adapters/openai.ts src/adapters/livekit.ts src/adapters/deepgram.ts src/adapters/elevenlabs.ts --format cjs,esm --dts --watch --external react --external react-dom --external @openai/agents --external livekit-client --external livekit-server-sdk --external @deepgram/sdk",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "voice",
+    "ai",
+    "openai",
+    "livekit",
+    "deepgram",
+    "elevenlabs",
+    "realtime",
+    "react",
+    "agent",
+    "webrtc",
+    "speech",
+    "provider-agnostic"
+  ],
+  "author": "Jacob Chaffin",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "zod": ">=3.0.0 || >=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@openai/agents": {
+      "optional": true
+    },
+    "livekit-client": {
+      "optional": true
+    },
+    "livekit-server-sdk": {
+      "optional": true
+    },
+    "@deepgram/sdk": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@openai/agents": ">=0.0.15",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jchaffin/voicekit"
+  }
+}
