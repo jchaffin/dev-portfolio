@@ -1,3 +1,4 @@
 [submodule "packages/gh-rag"]
 	path = packages/gh-rag
 	url = https://github.com/jchaffin/gh-rag.git
+	branch = master
