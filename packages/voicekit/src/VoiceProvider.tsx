@@ -209,20 +209,7 @@ export function VoiceProvider({
 
       updateStatus('CONNECTED');
 
-      // Configure VAD and trigger greeting (provider may ignore raw events)
-      session.sendRawEvent?.({
-        type: 'session.update',
-        session: {
-          input_audio_noise_reduction: { type: 'near_field' },
-          turn_detection: {
-            type: 'server_vad',
-            threshold: 0.9,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 1000,
-          },
-        },
-      });
-
+      // Trigger initial greeting
       setTimeout(() => {
         session.sendRawEvent?.({ type: 'response.create' });
       }, 500);

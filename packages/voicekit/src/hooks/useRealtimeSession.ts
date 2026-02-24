@@ -57,9 +57,11 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
     session.on('user_transcript', (data) => {
       if (data.isFinal) {
+        const text = data.text || data.delta || '';
+        if (text.replace(/[\s.…,!?]+/g, '').length === 0) return;
         historyHandlers.handleTranscriptionCompleted({
           item_id: data.itemId,
-          transcript: data.text || data.delta || '',
+          transcript: text,
         });
       } else if (data.delta) {
         historyHandlers.handleTranscriptionDelta({

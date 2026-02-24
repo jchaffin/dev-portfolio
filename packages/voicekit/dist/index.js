@@ -212,18 +212,6 @@ function VoiceProvider({
         audioElement: audioRef.current
       });
       updateStatus("CONNECTED");
-      session.sendRawEvent?.({
-        type: "session.update",
-        session: {
-          input_audio_noise_reduction: { type: "near_field" },
-          turn_detection: {
-            type: "server_vad",
-            threshold: 0.9,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 1e3
-          }
-        }
-      });
       setTimeout(() => {
         session.sendRawEvent?.({ type: "response.create" });
       }, 500);
@@ -1187,7 +1175,7 @@ function useSessionHistory() {
       if (role === "assistant" && !text) {
         text = "";
       } else if (role === "user" && !text) {
-        text = "[Transcribing...]";
+        return;
       }
       const guardrailMessage = sketchilyDetectGuardrailMessage(text);
       if (guardrailMessage) {
@@ -1224,6 +1212,7 @@ function useSessionHistory() {
     if (audioPositionMs !== void 0 && audioPositionMs > 0) {
       totalAudioDurationRef.current.set(itemId, audioPositionMs);
     }
+    if (text.replace(/[\s.…]+/g, "").length === 0) return;
     updateTranscriptMessage(itemId, text, false);
   }
   function handleTranscriptionCompleted(item) {
@@ -1240,7 +1229,8 @@ function useSessionHistory() {
       totalAudioDurationRef.current.delete(itemId);
       const displayedText = displayedTextRef.current.get(itemId);
       const finalText = displayedText || item.transcript || "";
-      if (finalText && finalText !== "\n") {
+      const stripped = finalText.replace(/[\s.…]+/g, "");
+      if (stripped.length > 0) {
         updateTranscriptMessage(itemId, finalText, false);
       }
       updateTranscriptItem(itemId, { status: "DONE" });
@@ -1360,9 +1350,11 @@ function useRealtimeSession(callbacks = {}) {
     });
     session.on("user_transcript", (data) => {
       if (data.isFinal) {
+        const text = data.text || data.delta || "";
+        if (text.replace(/[\s.…,!?]+/g, "").length === 0) return;
         historyHandlers.handleTranscriptionCompleted({
           item_id: data.itemId,
-          transcript: data.text || data.delta || ""
+          transcript: text
         });
       } else if (data.delta) {
         historyHandlers.handleTranscriptionDelta({

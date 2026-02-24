@@ -16,18 +16,18 @@
   "projects": [
     {
       "name": "Prosody.ai",
-      "description": "Voice AI platform injecting phonetic tone and emotion into LLMs. Latency-optimized microservices, WebRTC dashboard, and real-time charts.",
+      "description": "Prosody intelligence infrastructure for voice pipelines. SSM-based model (Mamba/S4D) runs parallel to ASR, streaming per-utterance emotion, VAD, and vertical-specific state. ConversationPredictor GRU for forward prediction (escalation risk, CSAT, churn, recommended tone). ProsodyCRM dashboard: API keys, transcript analysis, LoRA fine-tuning, Kafka orchestration. REST and WebSocket APIs, Python and JavaScript SDKs, sub-200ms p99.",
       "website": "https://www.prosodyai.app",
       "github": "https://github.com/jchaffin/prosody-ai",
       "images": "/projects/prosodyai",
-      "keywords": ["Python", "Next.js", "WebRTC", "LangChain", "GPT-4", "Whisper", "Docker"]
+      "keywords": ["Python", "Next.js", "Mamba SSM", "WebSocket", "ProsodyCRM", "LoRA", "Kafka", "Docker"]
     },
     {
       "name": "Sparke",
       "description": "Mobile tutoring app with a LiveKit-powered talking avatar. LLM orchestration with RAG, Twilio telephony, and Kafka-driven ELO feedback.",
       "website": "https://www.studyfetch.com",
       "images": "/projects/sparke",
-      "keywords": ["React Native", "LiveKit", "RAG", "Twilio", "Kafka", "GCP", "Python"]
+      "keywords": ["React Native", "LiveKit", "RAG", "WebRTC", "Kafka", "GCP", "Python"]
     },
     {
       "name": "AureliaStudio.AI",
@@ -55,8 +55,8 @@
       "endDate": null,
       "duration": "2024 Present",
       "location": "San Francisco, CA",
-      "description": "Built a real-time voice AI infrastructure platform that injects phonetic tone and emotional context into LLMs via a multimodal pipeline. Designed and deployed latency-optimized microservices for acoustic feature extraction, tone modeling, and token conditioning. Integrated WebSocket + REST APIs with Whisper, GPT-4, and LangChain agents for live sentiment augmentation. Created SDK and open API spec; deployed dashboard in Next.js and React with WebRTC and real-time charts using Recharts. Led full-stack architecture including Dockerized backend, CI/CD workflows, LLM fine-tuning, and synthetic data generation.",
-      "keywords": ["Python", "Next.js", "WebRTC", "LangChain", "GPT-4", "Whisper", "Docker"],
+      "description": "Built prosody intelligence infrastructure for voice pipelines: an SSM-based model (Mamba/S4D) that runs parallel to ASR and streams per-utterance emotion, VAD, and vertical-specific state. Designed and deployed 32-dim prosodic feature extraction, multi-head output (emotion softmax, VAD regression, vertical state mapping), and a causal GRU (ConversationPredictor) for forward prediction of escalation risk, CSAT, churn, and recommended tone. Built ProsodyCRM management plane: API keys, transcript analysis, outcome feedback loop, LoRA fine-tuning on GCP, Kafka event orchestration. REST and WebSocket APIs, Python and JavaScript SDKs; sub-200ms p99, horizontal scaling.",
+      "keywords": ["Python", "Next.js", "Mamba SSM", "WebSocket", "ProsodyCRM", "LoRA", "Kafka", "Docker"],
       "isCurrentRole": true
     },
     {
@@ -71,18 +71,6 @@
       "description": "Built a mobile tutoring app with a talking avatar powered by a LiveKit agent that ingests live audio, video, and screen-sharing tracks. Implemented backend LLM orchestration with material-level RAG, telephony, Twilio and CallKeep integration, and a Kafka-driven ELO feedback loop for study-plan progression, with authentication and token services hosted on GCP.",
       "keywords": ["React Native", "LiveKit", "RAG", "Twilio", "Kafka", "GCP", "Python"],
       "isCurrentRole": false
-    },
-    {
-      "company": "AureliaStudio.AI",
-      "website": "https://aureliastudio.ai",
-      "role": "Co-Founder & CTO",
-      "startDate": "2025",
-      "endDate": null,
-      "duration": "2025-Present",
-      "location": "San Francisco, CA",
-      "description": "AI-powered content studio for creators and beauty professionals. Built a multimodal generation pipeline combining vision, language, and audio models with an intuitive editor interface. Architected the full platform including LiveKit-powered real-time sessions, Kubernetes infrastructure on GCP, and a Next.js turborepo frontend.",
-      "keywords": ["LiveKit", "LangGraph", "Apollo GraphQL", "React Native", "AWS", "Kafka", "Terraform", "Python"],
-      "isCurrentRole": true
     },
     {
       "company": "Uniphore",

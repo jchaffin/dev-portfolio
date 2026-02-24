@@ -107,7 +107,7 @@ export function useSessionHistory() {
       if (role === 'assistant' && !text) {
         text = '';
       } else if (role === 'user' && !text) {
-        text = '[Transcribing...]';
+        return;
       }
 
       const guardrailMessage = sketchilyDetectGuardrailMessage(text);
@@ -160,7 +160,8 @@ export function useSessionHistory() {
     if (audioPositionMs !== undefined && audioPositionMs > 0) {
       totalAudioDurationRef.current.set(itemId, audioPositionMs);
     }
-    
+
+    if (text.replace(/[\s.…]+/g, '').length === 0) return;
     updateTranscriptMessage(itemId, text, false);
   }
 
@@ -184,7 +185,8 @@ export function useSessionHistory() {
       // Use whatever was displayed, or fall back to server transcript
       const displayedText = displayedTextRef.current.get(itemId);
       const finalText = displayedText || (item.transcript as string) || '';
-      if (finalText && finalText !== '\n') {
+      const stripped = finalText.replace(/[\s.…]+/g, '');
+      if (stripped.length > 0) {
         updateTranscriptMessage(itemId, finalText, false);
       }
       

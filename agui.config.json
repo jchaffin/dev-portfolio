@@ -425,7 +425,7 @@
     "token_alignment": "ASR timestamps align with generated tokens to keep prosodic cues consistent during TTS and downstream analysis.",
     "phonetic_embeddings": "A causal model projects MFCC and prosodic features into low dimensional embeddings for tone and intent.",
     "orchestration": "A LangGraph-style graph handles tool routing, guardrails, retries, and context pinning around the user goal.",
-    "prosody": "Prosody.ai analyzes tone and intent from live speech with streaming ASR, LLM orchestration, and custom PyTorch classifiers."
+    "prosody": "ProsodyAI is prosody intelligence infrastructure for voice pipelines. An SSM-based model (Mamba/S4D) runs parallel to ASR and streams per-utterance emotion, VAD, and vertical-specific state. ConversationPredictor GRU does forward prediction (escalation risk, CSAT, churn, recommended tone). ProsodyCRM provides API keys, transcript analysis, LoRA fine-tuning, and Kafka orchestration. REST and WebSocket APIs, Python and JS SDKs, sub-200ms p99."
   },
   "policy": {
     "pii_confirmation_required": [

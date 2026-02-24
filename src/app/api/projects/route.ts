@@ -41,7 +41,18 @@ export async function GET() {
       );
     }
 
-    const repos = await githubRes.json();
+    const allRepos = await githubRes.json();
+
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const repos = allRepos.filter((r: any) =>
+      !r.fork &&
+      !r.archived &&
+      r.size > 0 &&
+      new Date(r.pushed_at) > oneYearAgo
+    );
+
     return NextResponse.json(repos);
   } catch {
     return Response.json({ error: 'Failed to fetch projects' }, { status: 500 });

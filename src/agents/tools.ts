@@ -1,4 +1,5 @@
-import { defineTool, createNavigationTool, createAPITool, emitSuggestions } from '@jchaffin/voicekit';
+import { defineTool, createNavigationTool, emitSuggestions } from '@jchaffin/voicekit';
+import resumeData from '@/data/resume.json';
 
 // Legacy emitUI for non-suggestion tool events (contact form, calendly, etc.)
 function emitUI(name: string, data: Record<string, unknown>) {
@@ -70,24 +71,43 @@ export const downloadResume = defineTool({
 // Projects
 // ============================================================================
 
-export const getProjects = createAPITool({
+export const getProjects = defineTool({
   name: 'get_projects',
-  description: 'Get all projects from GitHub',
+  description: 'Get all of Jacob\'s projects — both featured projects and GitHub repos.',
   parameters: {},
-  endpoint: '/api/projects',
-  method: 'GET',
-  transform: (repos: unknown) => {
-    const projects = (repos as any[]).map(r => ({
-      name: r.name,
-      description: r.description || '',
-      tech: r.topics || [],
-      github: r.html_url,
-      live: r.homepage || ''
+  execute: async () => {
+    const featured = ((resumeData as any).projects || []).map((p: any) => ({
+      name: p.name,
+      description: p.description || '',
+      tech: p.keywords || [],
+      github: p.github || '',
+      live: p.website || '',
+      featured: true,
     }));
+
+    let github: any[] = [];
+    try {
+      const res = await fetch('/api/projects');
+      if (res.ok) {
+        const repos = await res.json();
+        github = repos.map((r: any) => ({
+          name: r.name,
+          description: r.description || '',
+          tech: r.topics || [],
+          github: r.html_url,
+          live: r.homepage || '',
+        }));
+      }
+    } catch {}
+
+    const featuredNames = new Set(featured.map((p: any) => p.name.toLowerCase()));
+    const dedupedGithub = github.filter(p => !featuredNames.has(p.name.toLowerCase()));
+    const allProjects = [...featured, ...dedupedGithub];
+
     emitSuggestions({
       type: 'project',
       prompt: 'Projects:',
-      items: projects.map(p => ({
+      items: allProjects.map(p => ({
         id: p.name.toLowerCase().replace(/\s+/g, '-'),
         label: p.name,
         message: `Tell me about the ${p.name} project`,
@@ -95,7 +115,8 @@ export const getProjects = createAPITool({
         meta: { url: p.live, github: p.github, tech: p.tech },
       })),
     });
-    return { success: true, projects };
+
+    return { success: true, projects: allProjects };
   }
 });
 
@@ -206,9 +227,6 @@ export const findProjectsByTech = defineTool({
 // ============================================================================
 // Experience (from resume.json)
 // ============================================================================
-
-// Import resume data for experience tools
-import resumeData from '@/data/resume.json';
 
 export const getExperience = defineTool({
   name: 'get_experience',
