@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "git submodule update --init --recursive && npm run build",
   "crons": [
     {
       "path": "/api/cron/ingest",

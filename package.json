@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
-    "@jchaffin/gh-rag": "workspace:*",
+    "@jchaffin/gh-rag": "^0.3.9",
     "@jchaffin/voicekit": "workspace:*",
     "@next/env": "^15.4.3",
     "@openai/agents": "^0.4.4",
