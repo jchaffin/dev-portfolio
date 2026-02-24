@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { SessionStatus, PortfolioContext } from '@/types';
-import { useTranscript, useRealtimeSession, useAudioRecorder, useSuggestions } from '@jchaffin/voicekit';
+import { useTranscript, useRealtimeSession, useAudioRecorder, useSuggestions, emitSuggestions } from '@jchaffin/voicekit';
 import { openai } from '@jchaffin/voicekit/openai';
 import { meAgent } from '@/agents/MeAgent';
+import resumeData from '@/data/resume.json';
 import type { ContactFormData, CalendlyData } from '@/components/voice/types';
 
 const adapter = openai();
@@ -179,10 +180,24 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     }
   }, [isDisconnected, clearSuggestions]);
 
-  // Greeting on connect
+  // Greeting + seed suggestion chips on connect
   useEffect(() => {
     if (isConnected && !greetingSentRef.current) {
       greetingSentRef.current = true;
+
+      const featuredProjects = ((resumeData as any).projects || []);
+      emitSuggestions({
+        type: 'project',
+        prompt: 'Projects:',
+        items: featuredProjects.map((p: any) => ({
+          id: p.name.toLowerCase().replace(/\s+/g, '-'),
+          label: p.name,
+          message: `Tell me about the ${p.name} project`,
+          description: p.description,
+          meta: { url: p.website, github: p.github, tech: p.keywords },
+        })),
+      });
+
       setTimeout(() => sendEvent({ type: 'response.create' }), 1200);
     }
   }, [isConnected, sendEvent]);
