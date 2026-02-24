@@ -160,17 +160,14 @@ function getProjectImages(imagesDir?: string): string[] {
   return files.map(f => `${imagesDir}/${f}`);
 }
 
-// Derive featured projects from resume.json — single source of truth
-const FEATURED_PROJECTS = resumeData.experience
-  .filter((exp: any) => exp.featured)
-  .map((exp: any) => ({
-    title: exp.projectName || exp.company,
-    description: exp.description,
-    images: getProjectImages(exp.images),
-    technologies: exp.keywords || [],
-    liveUrl: exp.website,
-    githubUrl: exp.github,
-  }));
+const FEATURED_PROJECTS = (resumeData as any).projects.map((proj: any) => ({
+  title: proj.name,
+  description: proj.description,
+  images: getProjectImages(proj.images),
+  technologies: proj.keywords || [],
+  liveUrl: proj.website,
+  githubUrl: proj.github,
+}));
 
 const ProjectCard = ({ project, index }: { project: Project; index: number }) => (
   <motion.div

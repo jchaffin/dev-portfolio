@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Navigation from '@/components/Navigation'
 import HeroSection from '@/components/HeroSection'
-import AboutSection from '@/components/AboutSection'
+
 import RecentWorkSection from '@/components/RecentWorkSection'
 import VoiceAISection from '@/components/VoiceAISection'
 import SkillsSection from '@/components/SkillsSection'
@@ -24,7 +24,6 @@ export default function Home() {
     <div className="min-h-screen">
       <Navigation />
       <HeroSection />
-      <AboutSection />
       <RecentWorkSection />
       <VoiceAISection />
       <SkillsSection />

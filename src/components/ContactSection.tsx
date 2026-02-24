@@ -37,7 +37,6 @@ const ContactSection = () => {
           Contact
           </h2>
           <p className="text-theme-secondary mb-6">
-            For serious inquiries only.
           </p>
           <div className="flex justify-center space-x-6">
             {socialLinks.map((item, index) => (

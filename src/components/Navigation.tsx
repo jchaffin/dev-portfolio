@@ -7,7 +7,7 @@ import ThemeToggle from './ThemeToggle'
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  const navItems = ['About', 'Projects', 'Skills', 'Voice', 'Resume', 'Contact']
+  const navItems = ['Projects', 'Voice', 'Skills', 'Resume', 'Contact']
 
   const getNavId = (item: string) => {
     return item.toLowerCase();

@@ -10,7 +10,7 @@ const HeroSection = () => {
           Jacob Chaffin
         </h1>
         <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto text-theme-secondary">
-          I build things that talk.
+          AI Engineer
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="#projects" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">

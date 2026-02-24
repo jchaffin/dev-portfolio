@@ -52,7 +52,7 @@ const AboutSection = () => {
             About Me
           </h2>
           <p className="text-lg max-w-3xl mx-auto text-theme-secondary">
-          Full-Stack Engineer with 5+ years of experience in Python, Node.js, and conversational AI.
+          Full-Stack Engineer with 7+ years of experience in Python, Node.js, and conversational AI.
           Focused on building low-latency infrastructure, modular applications, and
           orchestration pipelines that connect ASR, NLP, and TTS components.
           </p>
