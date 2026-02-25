@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
     forceSwcTransforms: false,
   },
   serverExternalPackages: ["sharp"],
+  turbopack: {
+    resolveAlias: {
+      // Use WASM build to avoid native libonnxruntime dependency (e.g. on Vercel / dev with Turbopack)
+      "onnxruntime-node": "onnxruntime-web",
+    },
+  },
   webpack: (config, { isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
