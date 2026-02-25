@@ -1,0 +1,61 @@
+// Prisma schema for project/company aggregation (no hardcoding)
+// Company = employer; Project = product/work; ProjectSource = which backends to aggregate (KB, RAG, etc.)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id       String   @id @default(cuid())
+  slug     String   @unique // e.g. studyfetch, prosodyai
+  name     String
+  website  String?
+  projects Project[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. prosodyai, sparke — research route looks up by ?key=
+  name        String
+  website     String?
+  github      String?
+  imagesPath  String?  // e.g. /projects/prosodyai
+  description String?
+  keywords    String[] @default([]) // tech tags for carousel
+  additionalSourceUrls String[] @default([]) // e.g. GitHub org, LinkedIn company — always shown in Sources
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  featured    Boolean  @default(false) // carousel / highlighted section
+  sources     ProjectSource[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum SourceType {
+  KNOWLEDGE
+  GITHUB
+  RAG
+  RESUME
+  WEB
+}
+
+model ProjectSource {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      SourceType
+  company   String?    // for KNOWLEDGE: company slug
+  repo      String?    // for RAG/GITHUB: owner/repo
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([projectId])
+}

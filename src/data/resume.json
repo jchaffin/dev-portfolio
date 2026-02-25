@@ -20,13 +20,15 @@
       "website": "https://www.prosodyai.app",
       "github": "https://github.com/jchaffin/prosody-ai",
       "images": "/projects/prosodyai",
-      "keywords": ["Python", "Next.js", "Mamba SSM", "WebSocket", "ProsodyCRM", "LoRA", "Kafka", "Docker"]
+      "keywords": ["Python", "Next.js", "Mamba SSM", "WebSocket", "ProsodyCRM", "LoRA", "Kafka", "Docker"],
+      "additionalSourceUrls": ["https://github.com/ProsodyAI", "https://www.linkedin.com/company/prosodyai"]
     },
     {
       "name": "Sparke",
       "description": "Mobile tutoring app with a LiveKit-powered talking avatar. LLM orchestration with RAG, Twilio telephony, and Kafka-driven ELO feedback.",
-      "website": "https://www.studyfetch.com",
-      "images": "/projects/sparke",
+"website": "https://www.studyfetch.com",
+    "knowledgeCompany": "studyfetch",
+    "images": "/projects/sparke",
       "keywords": ["React Native", "LiveKit", "RAG", "WebRTC", "Kafka", "GCP", "Python"]
     },
     {

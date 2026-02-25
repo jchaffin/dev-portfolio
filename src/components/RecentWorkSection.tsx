@@ -6,7 +6,19 @@ import { ChevronLeft, ChevronRight, ExternalLink, Github, FileText, Layers } fro
 import Image from 'next/image';
 import { getProjects, Project } from '@/lib/getProjects';
 import resumeData from '@/data/resume.json';
-import { PROJECT_DEEP_DIVES, getDeepDiveKey, ProjectDeepDive } from '@/data/projectDeepDives';
+import { DeepDiveModal, type ProjectDeepDive } from './DeepDiveModal';
+
+function getDeepDiveKey(imagesPath?: string | null): string | null {
+  if (!imagesPath) return null;
+  const s = String(imagesPath).trim();
+  const prefix = '/projects/';
+  const idx = s.indexOf(prefix);
+  if (idx === -1) return null;
+  const rest = s.slice(idx + prefix.length);
+  const end = rest.indexOf('/');
+  const key = end === -1 ? rest : rest.slice(0, end);
+  return key || null;
+}
 
 interface ProjectCarouselProps {
   title: string;
@@ -18,6 +30,7 @@ interface ProjectCarouselProps {
   blogSlug?: string;
   deepDive?: ProjectDeepDive | null;
   onOpenDeepDive?: () => void;
+  deepDiveLoading?: boolean;
 }
 
 const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
@@ -30,16 +43,18 @@ const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
   blogSlug,
   deepDive,
   onOpenDeepDive,
+  deepDiveLoading,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const safeImages = images.length > 0 ? images : ['/projects/prosodyai/1.png'];
 
-  const next = () => setCurrentIndex((i) => (i + 1) % images.length);
-  const prev = () => setCurrentIndex((i) => (i - 1 + images.length) % images.length);
+  const next = () => setCurrentIndex((i) => (i + 1) % safeImages.length);
+  const prev = () => setCurrentIndex((i) => (i - 1 + safeImages.length) % safeImages.length);
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700">
+    <div className="h-full flex flex-col bg-theme-primary rounded-2xl overflow-hidden shadow-xl border border-theme-primary">
       {/* Image Carousel */}
-      <div className="relative aspect-[4/3] bg-slate-100 dark:bg-slate-900 overflow-hidden shrink-0">
+      <div className="relative aspect-[4/3] bg-theme-tertiary overflow-hidden shrink-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -50,7 +65,7 @@ const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
             className="absolute inset-0"
           >
             <Image
-              src={images[currentIndex]}
+              src={safeImages[currentIndex]}
               alt={`${title} screenshot ${currentIndex + 1}`}
               fill
               sizes="(max-width: 1280px) 50vw, 25vw"
@@ -60,7 +75,7 @@ const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
         </AnimatePresence>
 
         {/* Navigation Arrows */}
-        {images.length > 1 && (
+        {safeImages.length > 1 && (
           <>
             <button
               onClick={prev}
@@ -78,9 +93,9 @@ const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
         )}
 
         {/* Dots Indicator */}
-        {images.length > 1 && (
+        {safeImages.length > 1 && (
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-            {images.map((_, i) => (
+            {safeImages.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentIndex(i)}
@@ -95,14 +110,15 @@ const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
 
       {/* Content */}
       <div className="p-8 flex flex-col flex-1 min-h-0 overflow-y-auto">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white break-words min-w-0">{title}</h3>
-          <div className="flex gap-2 shrink-0">
+        <div className="mb-3">
+          <h3 className="text-lg lg:text-xl font-bold text-theme-primary mb-2">{title}</h3>
+          <div className="flex gap-2">
             {deepDive && onOpenDeepDive && (
               <button
                 type="button"
                 onClick={onOpenDeepDive}
-                className="p-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+                disabled={deepDiveLoading}
+                className="p-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-50"
                 title="Deep dive"
               >
                 <Layers className="w-5 h-5" />
@@ -122,7 +138,7 @@ const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
                 href={githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-colors"
+                className="p-2 rounded-lg bg-theme-tertiary hover:bg-theme-secondary text-theme-secondary transition-colors"
               >
                 <Github className="w-5 h-5" />
               </a>
@@ -140,7 +156,7 @@ const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
           </div>
         </div>
 
-        <p className="text-slate-600 dark:text-slate-300 mb-4 leading-relaxed line-clamp-6 text-base lg:text-lg min-h-0">
+        <p className="text-theme-secondary mb-4 leading-relaxed line-clamp-6 text-base lg:text-lg min-h-0">
           {description}
         </p>
 
@@ -148,7 +164,7 @@ const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
           {technologies.map((tech) => (
             <span
               key={tech}
-              className="px-3 py-1.5 text-sm lg:text-base rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+              className="px-3 py-1.5 text-sm lg:text-base rounded-full bg-theme-tertiary text-theme-secondary"
             >
               {tech}
             </span>
@@ -175,15 +191,28 @@ function getProjectImages(imagesDir?: string): string[] {
   return files.map(f => `${imagesDir}/${f}`);
 }
 
-const FEATURED_PROJECTS = (resumeData as any).projects.map((proj: any) => ({
-  title: proj.name,
-  description: proj.description,
-  images: getProjectImages(proj.images),
-  technologies: proj.keywords || [],
-  liveUrl: proj.website,
-  githubUrl: proj.github,
-  imagesPath: proj.images,
-}));
+/** Shape for carousel from API or resume fallback */
+type FeaturedProject = {
+  title: string;
+  description: string;
+  images: string[];
+  technologies: string[];
+  liveUrl?: string;
+  githubUrl?: string;
+  imagesPath?: string;
+};
+
+function featuredFromResume(): FeaturedProject[] {
+  return (resumeData as any).projects.map((proj: any) => ({
+    title: proj.name,
+    description: proj.description,
+    images: getProjectImages(proj.images),
+    technologies: proj.keywords || [],
+    liveUrl: proj.website,
+    githubUrl: proj.github,
+    imagesPath: proj.images,
+  }));
+}
 
 const ProjectCard = ({ project, index }: { project: Project; index: number }) => (
   <motion.div
@@ -191,11 +220,11 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
     transition={{ duration: 0.5, delay: index * 0.1 }}
-    className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-shadow duration-300"
+    className="bg-theme-primary rounded-xl overflow-hidden shadow-lg border border-theme-primary hover:shadow-xl transition-shadow duration-300"
   >
     <div className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+        <h3 className="text-lg font-bold text-theme-primary">
           {project.title}
         </h3>
         <div className="flex space-x-2">
@@ -203,7 +232,7 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
             href={project.github}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            className="text-theme-secondary hover:text-accent-primary transition-colors"
           >
             <Github size={18} />
           </a>
@@ -211,26 +240,26 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
             href={project.live}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            className="text-theme-secondary hover:text-accent-primary transition-colors"
           >
             <ExternalLink size={18} />
           </a>
         </div>
       </div>
-      <p className="mb-4 text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+      <p className="mb-4 text-sm text-theme-secondary line-clamp-2">
         {project.description}
       </p>
       <div className="flex flex-wrap gap-1.5">
         {project.tech.slice(0, 4).map((tech: string, i: number) => (
           <span
             key={i}
-            className="px-2 py-0.5 rounded-full text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+            className="px-2 py-0.5 rounded-full text-xs bg-theme-tertiary text-theme-secondary"
           >
             {tech}
           </span>
         ))}
         {project.tech.length > 4 && (
-          <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 dark:bg-slate-700 text-slate-500">
+          <span className="px-2 py-0.5 rounded-full text-xs bg-theme-tertiary text-theme-tertiary">
             +{project.tech.length - 4}
           </span>
         )}
@@ -240,8 +269,71 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
 );
 
 export default function RecentWorkSection() {
+  const [featuredProjects, setFeaturedProjects] = useState<FeaturedProject[]>(featuredFromResume());
   const [githubProjects, setGithubProjects] = useState<Project[] | null>(null);
-  const [openDeepDive, setOpenDeepDive] = useState<{ title: string; data: ProjectDeepDive } | null>(null);
+  const [openDeepDive, setOpenDeepDive] = useState<{
+    title: string;
+    website?: string;
+    data: ProjectDeepDive | null;
+    key?: string;
+    projectImages?: string[];
+  } | null>(null);
+  const [deepDiveTab, setDeepDiveTab] = useState<'overview' | 'images' | 'sources'>('overview');
+  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+
+  async function fetchAndOpenDeepDive(projectTitle: string, key: string, website?: string, projectImages?: string[]) {
+    setOpenDeepDive({ title: projectTitle, website, data: null, key, projectImages });
+    setDeepDiveTab('overview');
+    setDeepDiveLoading(true);
+    try {
+      const res = await fetch(`/api/projects/research?key=${encodeURIComponent(key)}&refresh=1`);
+      if (!res.ok) throw new Error('Failed to load');
+      const data: ProjectDeepDive = await res.json();
+      setOpenDeepDive((prev) => (prev ? { ...prev, data } : null));
+    } catch {
+      setOpenDeepDive(null);
+    } finally {
+      setDeepDiveLoading(false);
+    }
+  }
+
+  async function regenerateDeepDive() {
+    const key = openDeepDive?.key;
+    if (!key) return;
+    setDeepDiveLoading(true);
+    try {
+      const res = await fetch(`/api/projects/research?key=${encodeURIComponent(key)}&refresh=1`);
+      if (!res.ok) throw new Error('Failed to regenerate');
+      const data: ProjectDeepDive = await res.json();
+      setOpenDeepDive((prev) => (prev ? { ...prev, data } : null));
+    } finally {
+      setDeepDiveLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/projects/featured')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: Array<{ name: string; description?: string | null; website?: string | null; github?: string | null; imagesPath?: string | null; keywords?: string[] }>) => {
+        if (!isMounted || !Array.isArray(data) || data.length === 0) return;
+        setFeaturedProjects(
+          data.map((p) => ({
+            title: p.name,
+            description: p.description ?? '',
+            images: getProjectImages(p.imagesPath ?? undefined),
+            technologies: Array.isArray(p.keywords) ? p.keywords : [],
+            liveUrl: p.website ?? undefined,
+            githubUrl: p.github ?? undefined,
+            imagesPath: p.imagesPath ?? undefined,
+          }))
+        );
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -254,7 +346,7 @@ export default function RecentWorkSection() {
   }, []);
 
   return (
-    <section id="projects" className="py-20 bg-slate-50 dark:bg-slate-900">
+    <section id="projects" className="py-20 bg-theme-secondary">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <motion.div
@@ -264,19 +356,19 @@ export default function RecentWorkSection() {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl font-bold mb-6 text-slate-900 dark:text-white">
+          <h2 className="text-4xl font-bold mb-6 text-theme-primary">
             Projects
           </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+          <p className="text-lg text-theme-secondary max-w-2xl mx-auto">
             Production AI systems built with real-time streaming, LLM orchestration, and agentic workflows
           </p>
         </motion.div>
 
         {/* Featured Projects with Carousels */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 mb-16 items-stretch">
-          {FEATURED_PROJECTS.map((project, index) => {
+          {featuredProjects.map((project, index) => {
             const deepDiveKey = getDeepDiveKey(project.imagesPath);
-            const deepDive = deepDiveKey ? PROJECT_DEEP_DIVES[deepDiveKey] ?? null : null;
+            const hasDeepDive = Boolean(deepDiveKey && project.liveUrl);
             return (
               <motion.div
                 key={project.title}
@@ -288,12 +380,13 @@ export default function RecentWorkSection() {
               >
                 <ProjectCarousel
                   {...project}
-                  deepDive={deepDive}
+                  deepDive={hasDeepDive ? { title: '', body: '' } : null}
                   onOpenDeepDive={
-                    deepDive
-                      ? () => setOpenDeepDive({ title: project.title, data: deepDive })
+                    hasDeepDive && deepDiveKey
+                      ? () => fetchAndOpenDeepDive(project.title, deepDiveKey, project.liveUrl, project.images)
                       : undefined
                   }
+                  deepDiveLoading={deepDiveLoading}
                 />
               </motion.div>
             );
@@ -308,10 +401,10 @@ export default function RecentWorkSection() {
           transition={{ duration: 0.6 }}
           className="mb-8"
         >
-          <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+          <h3 className="text-2xl font-bold text-theme-primary">
             More Projects
           </h3>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
+          <p className="text-theme-secondary mt-2">
             Open source work and experiments
           </p>
         </motion.div>
@@ -319,7 +412,7 @@ export default function RecentWorkSection() {
         {/* GitHub Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {githubProjects === null ? (
-            <div className="col-span-full text-center text-lg py-12 text-slate-500">
+            <div className="col-span-full text-center text-lg py-12 text-theme-secondary">
               Loading projects...
             </div>
           ) : (
@@ -330,46 +423,16 @@ export default function RecentWorkSection() {
         </div>
       </div>
 
-      {/* Deep Dive Modal */}
       <AnimatePresence>
         {openDeepDive && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpenDeepDive(null)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: 'spring', duration: 0.3 }}
-              className="fixed inset-4 md:inset-8 lg:inset-12 z-50 flex flex-col bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
-            >
-              <div className="flex items-center justify-between shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                  {openDeepDive.title} — {openDeepDive.data.title}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setOpenDeepDive(null)}
-                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                  aria-label="Close"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6">
-                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                  {openDeepDive.data.body}
-                </p>
-              </div>
-            </motion.div>
-          </>
+          <DeepDiveModal
+            open={openDeepDive}
+            tab={deepDiveTab}
+            onTabChange={setDeepDiveTab}
+            loading={deepDiveLoading}
+            onClose={() => setOpenDeepDive(null)}
+            onRegenerate={regenerateDeepDive}
+          />
         )}
       </AnimatePresence>
     </section>
