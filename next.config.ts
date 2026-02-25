@@ -11,6 +11,19 @@ const nextConfig: NextConfig = {
     // Disable strict mode for more lenient builds
     forceSwcTransforms: false,
   },
+  serverExternalPackages: ["sharp"],
+  webpack: (config, { isServer }) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      sharp$: false,
+      // Server: use WASM instead of native onnxruntime-node (no libonnxruntime.so on Vercel)
+      // Client: do not bundle onnxruntime-node
+      ...(isServer
+        ? { "onnxruntime-node": "onnxruntime-web" }
+        : { "onnxruntime-node$": false }),
+    };
+    return config;
+  },
   async headers() {
     return [
       {

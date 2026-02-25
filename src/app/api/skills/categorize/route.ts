@@ -58,18 +58,20 @@ export async function POST(request: NextRequest) {
       // Fetch GitHub projects for skill calculation
       let projects: { title: string; description: string; tech: string[] }[] = []
       try {
-        const baseUrl = process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
+        const baseUrl = process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
           : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
         const res = await fetch(`${baseUrl}/api/projects`, { cache: 'no-store' })
         if (res.ok) {
-          const repos = await res.json()
-          // Map GitHub API format to expected format (same as getProjects)
-          projects = repos.map((repo: any) => ({
-            title: repo.name,
-            description: repo.description || '',
-            tech: Array.isArray(repo.topics) ? repo.topics : [],
-          }))
+          const data = await res.json()
+          const featured = Array.isArray(data.featured) ? data.featured : []
+          const repos = Array.isArray(data.repos) ? data.repos : []
+          const toProject = (item: any) => ({
+            title: item.name || item.title || '',
+            description: item.description || '',
+            tech: Array.isArray(item.topics) ? item.topics : (item.keywords || []),
+          })
+          projects = [...featured.map(toProject), ...repos.map(toProject)]
         }
       } catch {
         // Continue without GitHub projects
@@ -86,7 +88,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(cached)
     }
 
-    const embedder = await getEmbedder()
+    let embedder: Awaited<ReturnType<typeof getEmbedder>>
+    try {
+      embedder = await getEmbedder()
+    } catch (embedderError) {
+      console.error('Categorize embedder init failed:', embedderError)
+      const categorizedSkills = (skills as Skill[]).slice(0, 8).map(s => ({
+        name: s.name,
+        level: Math.min(95, Math.max(70, s.level ?? 70)),
+        category: s.category || 'Other',
+        subSkills: [s.name],
+        calculation: s.calculation,
+      })).sort((a, b) => b.level - a.level)
+      return NextResponse.json({ categorizedSkills })
+    }
 
     const cosineSimilarity = (a: number[], b: number[]): number => {
       if (a.length !== b.length) return 0
