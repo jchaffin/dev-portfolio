@@ -264,54 +264,46 @@ export const getExperience = defineTool({
 
 export const searchExperience = defineTool({
   name: 'search_experience',
-  description: 'Search work experience — resume AND knowledge base docs. Returns resume summary and deeper documents.',
+  description: 'Search work experience by company or role. For skills/technology questions use find_projects_by_tech or search_project instead.',
   parameters: {
-    query: { type: 'string', description: 'Company, project, role, or technology to search for' },
-    company: { type: 'string', description: 'Optional: filter knowledge docs by company folder' }
+    query: { type: 'string', description: 'Company or role to search for' },
   },
   required: ['query'],
-  execute: async ({ query, company }: { query: string; company?: string }) => {
+  execute: async ({ query }: { query: string }) => {
     const q = query.toLowerCase();
 
-    // 1) Instant: local resume match (experience + projects)
+    // Resume metadata (instant)
     const expMatches = resumeData.experience.filter(exp => {
       const text = [
-        exp.company, exp.role, exp.description,
+        exp.company, exp.role,
         (exp as any).projectName || '',
         ...((exp as any).aliases || []),
-        ...(exp.keywords || [])
       ].join(' ').toLowerCase();
       return text.includes(q);
     });
 
-    const projMatches = ((resumeData as any).projects || []).filter((p: any) => {
-      const text = [p.name, p.description || '', ...(p.keywords || [])].join(' ').toLowerCase();
-      return text.includes(q);
-    });
+    const projMatches = ((resumeData as any).projects || []).filter((p: any) =>
+      p.name.toLowerCase().includes(q)
+    );
 
-    const resumeResults = expMatches.map(exp => ({
-      source: 'resume' as const,
+    const resume = expMatches.map(exp => ({
       company: exp.company,
       role: exp.role,
       period: `${exp.startDate}–${exp.endDate || 'Present'}`,
-      location: exp.location,
-      description: exp.description,
       technologies: exp.keywords || [],
       website: (exp as any).website || null,
-      isCurrentRole: (exp as any).isCurrentRole || false,
     }));
 
-    const projectResults = projMatches.map((p: any) => ({
-      source: 'resume_project' as const,
+    const projects = projMatches.map((p: any) => ({
       name: p.name,
-      description: p.description || '',
       tech: p.keywords || [],
       github: p.github || '',
       website: p.website || '',
     }));
 
-    // 2) Parallel: knowledge base search (Pinecone, GCS-ingested docs)
-    let knowledgeResults: any[] = [];
+    // Knowledge base docs from GCS (Pinecone)
+    let knowledge: any[] = [];
+    const company = resume[0]?.company?.toLowerCase().replace(/[.\s]+/g, '-') || undefined;
     try {
       const res = await fetch('/api/knowledge', {
         method: 'POST',
@@ -320,42 +312,31 @@ export const searchExperience = defineTool({
       });
       if (res.ok) {
         const data = await res.json();
-        knowledgeResults = (data.results || []).map((r: any) => ({
-          source: 'knowledge' as const,
+        knowledge = (data.results || []).map((r: any) => ({
           text: r.text,
           company: r.company,
           filename: r.filename,
           score: r.score,
         }));
       }
-    } catch {
-      // Knowledge base unavailable — resume results are still returned
-    }
+    } catch {}
 
-    const found = resumeResults.length > 0 || projectResults.length > 0 || knowledgeResults.length > 0;
+    const found = resume.length > 0 || projects.length > 0 || knowledge.length > 0;
 
-    if (found && resumeResults.length > 0) {
+    if (resume.length > 0) {
       emitSuggestions({
         type: 'experience',
-        prompt: `Experience matching "${query}":`,
-        items: resumeResults.map(e => ({
+        prompt: `Experience:`,
+        items: resume.map(e => ({
           id: e.company.toLowerCase().replace(/\s+/g, '-'),
           label: e.company,
-          message: `Tell me about the ${e.role} role at ${e.company}`,
+          message: `Tell me about ${e.company}`,
           description: e.role,
-          meta: { period: e.period, technologies: e.technologies },
         })),
       });
     }
 
-    return {
-      success: true,
-      query,
-      found,
-      resume: resumeResults,
-      projects: projectResults,
-      knowledge: knowledgeResults,
-    };
+    return { success: true, query, found, resume, projects, knowledge };
   }
 });
 

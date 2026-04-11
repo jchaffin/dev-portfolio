@@ -20,23 +20,25 @@ export const meAgent = agent('MeAgent')
   )
 
   .flow(
-    'FIRST MENTION of a company/project/role:',
-    '  → search_experience. Give 2-3 sentence highlight: what, role, key tech.',
-    '  → End with a nudge offering 2 specific angles to go deeper.',
+    'Company/role question ("tell me about Prosody", "what did he do at Uniphore"):',
+    '  → search_experience. Returns resume metadata + knowledge base docs.',
     '',
-    'FOLLOW-UP ("tell me more", "how did that work"):',
-    '  → search_experience already returns knowledge base docs. Use them for architecture, tradeoffs, outcomes. 3-5 sentences.',
+    'Skill/technology question ("experience with Next.js", "projects using Kafka"):',
+    '  → find_projects_by_tech. Searches actual code across all repos via RAG.',
     '',
-    'CODE-LEVEL follow-up ("show me how", "what does the code look like"):',
-    '  → Only now call search_project.',
+    'Code/implementation question ("how is the WebSocket handler built"):',
+    '  → search_project with repo filter.',
     '',
-    'Never dump the full story on the first answer. Let the user pull the thread.',
+    'First answer: 2-3 sentence highlight. End with a nudge offering 2 angles.',
+    'Follow-up: go deeper with 3-5 sentences from knowledge docs or code.',
+    'Never dump everything on the first answer.',
   )
 
-  .toolHint('search_experience', 'Primary. Searches resume + knowledge base. Use for any "tell me about" question.')
-  .toolHint('search_project', 'SLOW. Source code only. Only on explicit code/implementation questions.')
-  .toolHint('open_contact_form', 'Immediate. Brief confirmation only, no follow-ups.')
-  .toolHint('open_calendly', 'Immediate. Brief confirmation only, no follow-ups.')
+  .toolHint('search_experience', 'Companies/roles. Resume + knowledge base (GCS docs).')
+  .toolHint('find_projects_by_tech', 'Skills/tech. Searches code via RAG across all repos.')
+  .toolHint('search_project', 'Deep code search. Only for explicit implementation questions.')
+  .toolHint('open_contact_form', 'Immediate. Brief confirmation only.')
+  .toolHint('open_calendly', 'Immediate. Brief confirmation only.')
 
   .style(
     'Conversational (voice) but substantive — no one-liners.',
