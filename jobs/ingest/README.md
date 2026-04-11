@@ -1,8 +1,26 @@
 # RAG Ingest Job
 
-Standalone job that ingests GitHub repos into Pinecone for RAG search. Designed to run as a daily scheduled job on GCP.
+## Production (Vercel)
 
-## Environment Variables
+**Scheduled ingest runs on Vercel**, not in this folder. [`vercel.json`](../vercel.json) defines a cron that calls **`GET /api/cron/ingest`** daily at **04:00 UTC** (`0 4 * * *`). That handler lives at [`src/app/api/cron/ingest/route.ts`](../src/app/api/cron/ingest/route.ts), uses `@jchaffin/gh-rag`, and walks your GitHub repos (via `GITHUB_TOKEN`) into Pinecone.
+
+| Env (Vercel project) | Notes |
+|----------------------|--------|
+| `OPENAI_API_KEY` | Required |
+| `PINECONE_API_KEY` | Required |
+| `PINECONE_INDEX` or `PINECONE_INDEX_NAME` | Required |
+| `GITHUB_TOKEN` | Required (repo access for ingest) |
+| `CRON_SECRET` | Recommended: Vercel sends `Authorization: Bearer …` on cron invocations; also use for manual triggers |
+
+Ensure the Vercel project has **Cron Jobs** enabled for your plan (Pro or configured cron on Hobby where supported).
+
+---
+
+## This folder (`jobs/ingest`)
+
+Optional **standalone** script when you want to ingest an **explicit repo list** locally, in CI, or in a one-off container — same RAG stack, **not** what Vercel invokes on the schedule above.
+
+## Environment Variables (standalone script)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -28,7 +46,9 @@ export GITHUB_INGEST_REPOS="owner/repo1,owner/repo2"
 npm start
 ```
 
-## Deploy to GCP Cloud Run Jobs
+## Optional: deploy as a container (e.g. GCP Cloud Run)
+
+Only if you want this **standalone** job on your own infra—not required for the Vercel-hosted app.
 
 ### 1. Build and push container
 
@@ -76,9 +96,9 @@ gcloud scheduler jobs create http gh-rag-ingest-daily \
 gcloud run jobs execute gh-rag-ingest --region $REGION
 ```
 
-## Alternative: GitHub Actions
+## Optional: GitHub Actions
 
-Add `.github/workflows/ingest.yml`:
+Add `.github/workflows/ingest.yml` if you want scheduled ingest outside Vercel:
 
 ```yaml
 name: Daily RAG Ingest

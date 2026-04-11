@@ -3,6 +3,10 @@ import { envConfig } from '@/lib/envConfig';
 import { createGhRag } from '@jchaffin/gh-rag';
 import { Pinecone } from '@pinecone-database/pinecone';
 
+/** Cron must not be statically cached; ingest can exceed default serverless timeout. */
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
+
 interface GhRepo {
   full_name: string;
   fork: boolean;
@@ -38,10 +42,9 @@ async function listUserRepos(token: string): Promise<GhRepo[]> {
 export async function GET(request: NextRequest) {
   envConfig();
 
-  // Verify cron secret to prevent unauthorized triggers
+  // Same check as https://vercel.com/docs/cron-jobs#securing-cron-jobs
   const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET?.trim();
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
