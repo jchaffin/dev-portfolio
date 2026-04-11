@@ -42,12 +42,6 @@ async function main() {
   const pinecone = new Pinecone({ apiKey: PINECONE_API_KEY });
   const index = pinecone.index(indexName);
 
-  const ghRag = createGhRag({
-    openaiApiKey: OPENAI_API_KEY,
-    githubToken: GITHUB_TOKEN,
-    pine: { index },
-  });
-
   // Ingest each repo
   const results: IngestResult[] = [];
 
@@ -55,6 +49,14 @@ async function main() {
     const gitUrl = repo.startsWith('http') ? repo : `https://github.com/${repo}.git`;
     console.log(`\n📥 Ingesting: ${repo}`);
     console.log(`   URL: ${gitUrl}`);
+
+    // Full `owner/repo` avoids Pinecone namespace collisions (e.g. ProsodyAI/api vs other orgs).
+    const namespace = repo.includes('/') ? repo : undefined;
+    const ghRag = createGhRag({
+      openaiApiKey: OPENAI_API_KEY,
+      githubToken: GITHUB_TOKEN,
+      pine: { index, namespace },
+    });
 
     const startTime = Date.now();
     try {

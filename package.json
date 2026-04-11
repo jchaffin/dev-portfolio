@@ -14,11 +14,13 @@
     "build:voicekit": "npm run build -w @jchaffin/voicekit",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "rag:wipe": "gh-rag wipe --force",
+    "rag:ingest": "gh-rag ingest"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
-    "@jchaffin/gh-rag": "^0.3.10",
+    "@jchaffin/gh-rag": "^0.3.13",
     "@jchaffin/voicekit": "workspace:*",
     "@next/env": "^15.4.3",
     "@openai/agents": "^0.4.4",

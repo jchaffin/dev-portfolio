@@ -53,6 +53,8 @@ export interface TranscriptItem {
   title?: string;
   timestamp?: string;
   createdAtMs: number;
+  /** Stable display order from voicekit TranscriptProvider */
+  insertSeq?: number;
   isHidden?: boolean;
 }
 

@@ -133,13 +133,14 @@ export function useSessionHistory() {
       
       const text = extractMessageText(content);
       if (text) {
-        updateTranscriptMessage(itemId, text, false);
+        updateTranscriptMessage(itemId, text, false, 'user');
       }
     });
   }
 
   function handleTranscriptionDelta(item: Record<string, unknown>) {
     const itemId = item.item_id as string;
+    const role = (item.role as 'user' | 'assistant') || 'user';
     const deltaText = (item.delta as string) || '';
     if (!itemId || !deltaText) return;
     
@@ -149,11 +150,12 @@ export function useSessionHistory() {
     accumulatedTextRef.current.set(itemId, text);
 
     if (text.replace(/[\s.…]+/g, '').length === 0) return;
-    updateTranscriptMessage(itemId, text, false);
+    updateTranscriptMessage(itemId, text, false, role);
   }
 
   function handleTranscriptionCompleted(item: Record<string, unknown>) {
     const itemId = item.item_id as string;
+    const role = (item.role as 'user' | 'assistant') || 'user';
     
     if (interruptedItemsRef.current.has(itemId)) return;
     
@@ -169,7 +171,7 @@ export function useSessionHistory() {
       const finalText = accumulatedText || (item.transcript as string) || '';
       const stripped = finalText.replace(/[\s.…]+/g, '');
       if (stripped.length > 0) {
-        updateTranscriptMessage(itemId, finalText, false);
+        updateTranscriptMessage(itemId, finalText, false, role);
       }
       
       updateTranscriptItem(itemId, { status: 'DONE' });
@@ -252,7 +254,7 @@ export function useSessionHistory() {
       interruptedItemsRef.current.add(itemId);
 
       if (spokenText.length > 0) {
-        updateTranscriptMessage(itemId, spokenText + '...', false);
+        updateTranscriptMessage(itemId, spokenText + '...', false, 'user');
         updateTranscriptItem(itemId, { status: 'DONE' });
       } else {
         updateTranscriptItem(itemId, { isHidden: true, status: 'DONE' });

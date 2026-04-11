@@ -138,7 +138,6 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
   // Send message
   const sendMessage = useCallback((text: string) => {
     if (!isConnectedRef()) return;
-    interrupt();
     try {
       sendUserText(text);
     } catch {
@@ -149,7 +148,7 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
       });
       sendEvent({ type: 'response.create' });
     }
-  }, [sendUserText, sendEvent, interrupt]);
+  }, [sendUserText, sendEvent]);
 
   // Suggestion click
   const handleSuggestionClick = useCallback(async (message: string) => {

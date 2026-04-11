@@ -1,119 +1,198 @@
 {
-  "name":  "Jacob Chaffin",
-  "summary": "AI infrastructure engineer building agentic systems and LLM orchestration layers. 6+ years designing real-time streaming pipelines and multi-agent coordination. Expert in building autonomous AI agents that reason, plan, and execute complex workflows. Deep experience with RAG systems, vector databases, voice AI platforms, and production ML infrastructure across AWS/GCP with Kubernetes.",
+  "name": "Jacob Chaffin",
+  "summary": "Full-stack engineer with 7+ years building and operating production AI and real-time systems. Architected and scaled conversational infrastructure to 6M+ users while maintaining sub-200ms latency and 99.9% uptime. Designs agentic workflows with LangGraph, event-driven backends using Kafka, and production LLM APIs optimized for streaming (SSE, WebSockets), RAG, and vector retrieval. Trained and deployed custom PyTorch models on GPU-enabled Kubernetes and shipped real-time voice agents with LiveKit and Pipecat. Skilled in Python, Node.js/TypeScript, Next.js/React, and GraphQL/Apollo Gateway; proven at delivering low-latency, highly available ML-backed services.",
   "skills": [
-    "Agentic AI",
-    "LLM Orchestration", 
-    "Voice AI",
-    "Real-time Systems",
-    "RAG Systems",
-    "React",
     "Python",
+    "Node.js",
     "TypeScript",
+    "Next.js",
+    "React",
+    "GraphQL",
+    "Apollo Gateway",
+    "LangGraph",
+    "Kafka",
+    "WebSockets",
+    "RAG",
+    "SSE",
     "Kubernetes",
-    "WebRTC"
+    "LiveKit",
+    "Pipecat"
   ],
   "projects": [
     {
       "name": "Prosody.ai",
-      "description": "Prosody intelligence infrastructure for voice pipelines. SSM-based model (Mamba/S4D) runs parallel to ASR, streaming per-utterance emotion, VAD, and vertical-specific state. ConversationPredictor GRU for forward prediction (escalation risk, CSAT, churn, recommended tone). ProsodyCRM dashboard: API keys, transcript analysis, LoRA fine-tuning, Kafka orchestration. REST and WebSocket APIs, Python and JavaScript SDKs, sub-200ms p99.",
+      "description": "Architected ProsodySSM, a speech intelligence framework utilizing a 4-layer Mamba SSM with linear O(n) complexity for long-context audio processing. Shipped a streaming audio ingest system with pre-ASR feature extraction, delivering sub-200ms p95 inference for live agent guidance and post-call analytics. Built a multi-tenant product in TypeScript/Next.js featuring strict tenant isolation, RBAC, and comprehensive auditability for enterprise QA and search dashboards. Developed a GRU-based Forward Prediction engine with 8 predictive heads to track session-level outcomes like Escalation Risk and CSAT with sequence-length confidence scaling. Engineered a 32-dimensional prosodic feature extraction suite (F0, Energy, HNR, Jitter) running parallel to ASR for real-time VAD (Valence-Arousal-Dominance) regression.",
       "website": "https://www.prosodyai.app",
       "github": "https://github.com/jchaffin/prosody-ai",
       "images": "/projects/prosodyai",
-      "keywords": ["Python", "Next.js", "Mamba SSM", "WebSocket", "ProsodyCRM", "LoRA", "Kafka", "Docker"],
-      "additionalSourceUrls": ["https://github.com/ProsodyAI", "https://www.linkedin.com/company/prosodyai"]
+      "keywords": [
+        "ProsodySSM",
+        "Mamba SSM",
+        "Audio processing",
+        "Streaming audio",
+        "RBAC",
+        "GRU",
+        "Feature extraction"
+      ],
+      "additionalSourceUrls": [
+        "https://github.com/ProsodyAI",
+        "https://www.linkedin.com/company/prosodyai"
+      ]
     },
     {
       "name": "Sparke",
       "description": "Mobile tutoring app with a LiveKit-powered talking avatar. LLM orchestration with RAG, Twilio telephony, and Kafka-driven ELO feedback.",
-"website": "https://www.studyfetch.com",
-    "knowledgeCompany": "studyfetch",
-    "images": "/projects/sparke",
+      "website": "https://www.studyfetch.com",
+      "knowledgeCompany": "studyfetch",
+      "images": "/projects/sparke",
       "keywords": ["React Native", "LiveKit", "RAG", "WebRTC", "Kafka", "GCP", "Python"]
     },
     {
       "name": "AureliaStudio.AI",
-      "description": "AI content studio with LangGraph multi-agent orchestration, Apollo GraphQL over DynamoDB, and LiveKit real-time sessions on Kubernetes.",
+      "description": "Built a multi-tenant voice AI platform for luxury MedSpas. Orchestrated real-time booking, payments, memberships, and intake flows using a LangGraph state machine with dynamic STT/LLM/TTS routing (including Orpheus TTS) per call. Deployed LiveKit Cloud (WebRTC + SIP), Apollo Federation across 5 GraphQL services, Stripe Connect for per-tenant payments, and AWS infrastructure provisioned via Terraform. Uses Kafka for event-driven workflows, async domain events, and cross-service coordination at scale.",
       "website": "https://aureliastudio.ai",
       "github": "https://github.com/jchaffin/aureliastudio.ai",
       "images": "/projects/aureliastudio",
-      "keywords": ["LangGraph", "LiveKit", "Apollo GraphQL", "DynamoDB", "React Native", "Kubernetes", "GCP", "Python"]
+      "keywords": [
+        "Voice AI platform",
+        "LangGraph",
+        "LiveKit Cloud",
+        "GraphQL",
+        "AWS",
+        "Terraform",
+        "Stripe Connect",
+        "Kafka"
+      ]
     },
     {
       "name": "Realtime Metrics Dashboard",
       "description": "Real-time voice AI analytics dashboard. KPI scoring with Pinecone, latency monitoring, and Pipecat Cloud call orchestration.",
       "website": "https://frontend-three-flax-30.vercel.app/",
-      "github": "https://github.com/jchaffin/outrival",
+      "github": "https://github.com/jchaffin/bottalk",
       "images": "/projects/outrival",
       "keywords": ["Next.js", "Pipecat", "Pinecone", "LiveKit", "WebSocket", "Real-time Analytics", "Voice AI"]
     }
   ],
   "experience": [
     {
+      "company": "AureliaStudio.ai",
+      "website": "https://aureliastudio.ai",
+      "github": "https://github.com/jchaffin/aureliastudio.ai",
+      "role": "Founding Engineer",
+      "startDate": "Feb 2026",
+      "endDate": null,
+      "duration": "Feb 2026 – Present",
+      "location": "",
+      "description": "Founding engineer on AureliaStudio’s multi-tenant voice stack for luxury MedSpas. Full product arc, stack, and shipping detail live under the AureliaStudio.AI featured project.",
+      "keywords": [
+        "Voice AI platform",
+        "LangGraph",
+        "LiveKit Cloud",
+        "GraphQL",
+        "AWS",
+        "Terraform",
+        "Stripe Connect",
+        "Kafka"
+      ],
+      "isCurrentRole": true,
+      "featuredProjectName": "AureliaStudio.AI",
+      "engagement": "owned_product"
+    },
+    {
       "company": "Prosody.ai",
       "website": "https://www.prosodyai.app",
+      "github": "https://github.com/jchaffin/prosody-ai",
       "role": "Principal AI Engineer",
       "startDate": "2024",
       "endDate": null,
-      "duration": "2024 Present",
+      "duration": "2024 – Present",
       "location": "San Francisco, CA",
-      "description": "Built prosody intelligence infrastructure for voice pipelines: an SSM-based model (Mamba/S4D) that runs parallel to ASR and streams per-utterance emotion, VAD, and vertical-specific state. Designed and deployed 32-dim prosodic feature extraction, multi-head output (emotion softmax, VAD regression, vertical state mapping), and a causal GRU (ConversationPredictor) for forward prediction of escalation risk, CSAT, churn, and recommended tone. Built ProsodyCRM management plane: API keys, transcript analysis, outcome feedback loop, LoRA fine-tuning on GCP, Kafka event orchestration. REST and WebSocket APIs, Python and JavaScript SDKs; sub-200ms p99, horizontal scaling.",
-      "keywords": ["Python", "Next.js", "Mamba SSM", "WebSocket", "ProsodyCRM", "LoRA", "Kafka", "Docker"],
-      "isCurrentRole": true
+      "description": "Prosody intelligence platform and ProsodyCRM — architecture, models, and APIs. Deep technical narrative lives under the Prosody.ai featured project.",
+      "keywords": [
+        "ProsodySSM",
+        "Mamba SSM",
+        "Python",
+        "Next.js",
+        "WebSocket",
+        "Kafka",
+        "GCP"
+      ],
+      "isCurrentRole": false,
+      "featuredProjectName": "Prosody.ai",
+      "engagement": "owned_product"
     },
     {
-      "company": "Studyfetch",
+      "company": "StudyFetch",
       "website": "https://www.studyfetch.com",
       "aliases": ["Sparke", "Study Fetch"],
       "projectName": "Sparke",
-      "role": "Senior AI Engineer",
+      "role": "Senior Fullstack Engineer",
       "startDate": "2025",
       "endDate": "2026",
+      "duration": "2025 to 2026",
       "location": "Beverly Hills, CA",
-      "description": "Built a mobile tutoring app with a talking avatar powered by a LiveKit agent that ingests live audio, video, and screen-sharing tracks. Implemented backend LLM orchestration with material-level RAG, telephony, Twilio and CallKeep integration, and a Kafka-driven ELO feedback loop for study-plan progression, with authentication and token services hosted on GCP.",
-      "keywords": ["React Native", "LiveKit", "RAG", "Twilio", "Kafka", "GCP", "Python"],
-      "isCurrentRole": false
+      "description": "Architected and owned the real-time voice call and conversational avatar infrastructure for Spark.E and TutorMe, scaling the systems to support 6M+ users and a $11.5M Series A. Engineered a LiveKit-based agent over WebRTC to handle synchronized live audio, video, and the Spark.E avatar’s interactive state, achieving sub-100ms conversational latency. Developed a custom LiveKit DataChannel pipeline to inject study-set context and session state into the LLM, ensuring the avatar’s responses were grounded in assigned materials. Designed and deployed a Node.js authentication and token service on GCP utilizing JWT/LiveKit access tokens and Twilio SMS verification for high-concurrency access. Implemented a Kafka-driven ELO feedback pipeline to analyze session data in real-time and dynamically adapt student learning paths based on performance metrics. Managed the end-to-end voice session lifecycle and connection stability, ensuring 99.9% uptime during massive global traffic spikes.",
+      "keywords": [
+        "Voice call infrastructure",
+        "Conversational avatar",
+        "LiveKit",
+        "WebRTC",
+        "Node.js",
+        "GCP",
+        "JWT",
+        "Twilio",
+        "Kafka"
+      ],
+      "isCurrentRole": false,
+      "engagement": "employment",
+      "knowledgeCompany": "studyfetch"
     },
     {
       "company": "Uniphore",
       "website": "https://www.uniphore.com",
-      "role": "Voice AI Engineer",
-      "startDate": "September 2021",
-      "endDate": "October 2024",
-      "duration": "September 2021-October 2024",
-      "location": "Hybrid (Palo Alto, CA)",
-      "description": "Developed modular UI components and dynamic pages for agent-assist tools using Next.js, React, and GraphQL, integrating live ASR and voice analytics. Engineered real-time sentiment visualization layers with phonetic and lexical embeddings for enhanced client-side rendering. Streamlined SSR/ISR logic for data-heavy voice sessions, improving initial load times by 35%. Modernized analytics pipelines to support LLM-driven conversational interfaces, implementing deep tone-aware inference. Built internal analytics tools with NumPy, Pandas, Jupyter, and Python for behavioral insights.",
+      "role": "Software Engineer",
+      "startDate": "Jun 2021",
+      "endDate": "Oct 2024",
+      "duration": "Jun 2021 to Oct 2024",
+      "location": "",
+      "description": "Built and operated production backend services for conversational AI, shipping low-latency APIs and streaming interfaces used by voice workflows. Owned deployment automation for model-backed services, including CI/CD, environment promotion, canary-style rollouts, and reproducible builds across multiple environments. Implemented observability for real-time systems (structured logging, metrics, tracing, alerting), reducing time-to-diagnosis for latency regressions and incident response. Integrated speech and language components into stable production pipelines, evolving systems from classic NLU patterns toward LLM-backed orchestration where it improved product outcomes. Designed service boundaries and data contracts for multi-tenant operation, with attention to reliability under concurrent traffic and failure-mode handling. Built internal tooling to speed iteration (evaluation harnesses, replay workflows, regression checks), improving confidence when shipping changes to live traffic. Partnered cross-functionally with product and applied teams to translate model behavior into deployable, measurable services, and to close gaps discovered in production.",
       "keywords": [
-        "Next.js",
-        "React",
-        "GraphQL",
-        "ASR",
-        "voice analytics",
-        "phonetic embeddings",
-        "SSR/ISR",
-        "behavioral insights"
+        "Conversational AI",
+        "Deployment automation",
+        "CI/CD",
+        "Observability",
+        "Real-time systems",
+        "NLU",
+        "LLM",
+        "Tooling"
       ],
-      "isCurrentRole": false
+      "isCurrentRole": false,
+      "engagement": "employment",
+      "knowledgeCompany": "uniphore"
     },
     {
       "company": "Wave Computing",
       "website": "https://en.wikipedia.org/wiki/Wave_Computing",
-      "role": "Software Engineer",
-      "startDate": "June 2018",
-      "endDate": "September 2020",
-      "duration": "June 2018 September 2020",
+      "role": "AI Associate",
+      "startDate": "Jun 2018",
+      "endDate": "2020",
+      "duration": "Jun 2018 to 2020",
       "location": "Campbell, CA",
-      "description": "Developed and optimized neural networks for audio and vision classification using PyTorch. Built and deployed machine learning models utilizing TensorFlow, enhancing model accuracy through extensive data analysis. Created full-stack applications for administrative login and data transfer with Node.js and React, integrating GraphQL for efficient data querying. Designed and maintained an interactive visualization tool for error tracing on Wave's proprietary DPU-based compiler. Collaborated with cross-functional teams to integrate AI solutions into products, researching cutting-edge techniques in natural language processing.",
+      "description": "Built custom TensorFlow ops to simulate neural network execution on the DPU Compiler, enabling early validation of operator behavior and alignment with hardware constraints. Developed and optimized neural networks for audio and vision classification using PyTorch. Designed and maintained an interactive visualization tool for error tracing on Wave's proprietary DPU-based compiler. Developed full-stack admin tools with Node.js, React, and GraphQL for secure login and data transfer to AWS S3, deployed via Docker containers. Reduced API payload size by 40% and streamlined file management workflows.",
       "keywords": [
-        "PyTorch",
         "TensorFlow",
+        "DPU",
+        "PyTorch",
+        "Visualization",
         "Node.js",
         "React",
         "GraphQL",
-        "DPU-based compiler",
-        "error tracing"
+        "AWS S3",
+        "Docker"
       ],
-      "isCurrentRole": false
+      "isCurrentRole": false,
+      "engagement": "employment",
+      "knowledgeCompany": "wave-computing"
     }
   ],
   "education": [
@@ -132,6 +211,6 @@
     "location": "Los Angeles, CA",
     "linkedin": "https://www.linkedin.com/in/jacob-chaffin/",
     "github": "https://github.com/jchaffin",
-    "website": "https://jacobchaffin.io "
+    "website": "https://jacobchaffin.io"
   }
 }

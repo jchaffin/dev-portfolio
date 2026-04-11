@@ -11,6 +11,84 @@ const RAG_TTL = 300; // 5 minutes
 const makeKey = (repo: string, query: string, limit: number) =>
   cacheKey('rag', repo || 'all', query, String(limit));
 
+/**
+ * Pinecone namespace from a repo identifier.
+ *
+ * Ingest uses `owner/repo` as the namespace to avoid collisions across orgs
+ * (e.g. ProsodyAI/api vs jchaffin/api). URLs are normalised to `owner/repo`;
+ * plain `owner/repo` strings pass through unchanged.
+ */
+function pineconeNamespaceFromRepo(input: string | undefined | null): string | undefined {
+  if (input == null) return undefined;
+  const t = String(input).trim();
+  if (!t) return undefined;
+  const noGit = t.replace(/\.git$/i, '');
+  // Full GitHub URL → owner/repo
+  const fromUrl = noGit.match(/github\.com\/([^/]+\/[^/?#]+)/i);
+  if (fromUrl?.[1]) return fromUrl[1].replace(/\.git$/i, '');
+  if (/^https?:\/\//i.test(noGit)) {
+    try {
+      const parts = new URL(noGit).pathname.split('/').filter(Boolean);
+      if (parts.length >= 2) return `${parts[0]}/${parts[1].replace(/\.git$/i, '')}`;
+    } catch {
+      /* ignore */
+    }
+  }
+  // Already owner/repo or bare slug — keep as-is
+  return noGit;
+}
+
+/** Pinecone may still hold legacy chunks; never surface dependency / build junk. */
+function snippetPath(s: Record<string, unknown>): string {
+  const p = s.path;
+  if (typeof p === 'string') return p.replace(/\\/g, '/');
+  const meta = s.metadata;
+  if (meta && typeof meta === 'object' && typeof (meta as { path?: string }).path === 'string') {
+    return (meta as { path: string }).path.replace(/\\/g, '/');
+  }
+  return '';
+}
+
+function isJunkSourcePath(filePath: string): boolean {
+  if (!filePath) return false;
+  const n = filePath.toLowerCase();
+  const segs = [
+    '/node_modules/',
+    'node_modules/',
+    '/.pnpm/',
+    '/.yarn/',
+    '/__pycache__/',
+    '/.next/',
+    '/.nuxt/',
+    '/dist/',
+    '/build/',
+    '/out/',
+    '/.git/',
+    '/.turbo/',
+    '/.cache/',
+    '/coverage/',
+    '/vendor/bundle/',
+    '/.venv/',
+    '/venv/',
+  ];
+  return segs.some((s) => n.includes(s));
+}
+
+function sanitizeRagPayload<T extends Record<string, unknown>>(data: T): T {
+  const snippets = data.snippets;
+  if (!Array.isArray(snippets)) return data;
+  const filtered = snippets.filter((raw) => {
+    if (!raw || typeof raw !== 'object') return false;
+    const s = raw as Record<string, unknown>;
+    return !isJunkSourcePath(snippetPath(s));
+  });
+  return {
+    ...data,
+    snippets: filtered,
+    snippetsFound: filtered.length,
+  } as T;
+}
+
 // Background ingestion job tracking
 type IngestJob = {
   id: string;
@@ -109,10 +187,11 @@ export async function PUT(request: NextRequest) {
         const indexName = getPineconeIndexName();
         const index = pinecone.index(indexName);
 
+        const namespace = repo.includes('/') ? repo.replace(/\.git$/i, '') : undefined;
         const ghRag = createGhRag({
           openaiApiKey: process.env.OPENAI_API_KEY!,
           githubToken: process.env.GITHUB_TOKEN,
-          pine: { index },
+          pine: { index, namespace } as any,
         });
 
         const ingestOpts: { gitUrl: string; ref?: string; fileGlobs?: string[] } = { gitUrl };
@@ -159,12 +238,14 @@ export async function POST(request: NextRequest) {
   envConfig();
   
   try {
-    const { repo, query, limit = 5 } = await request.json();
+    const { repo: repoBody, query, limit = 5, skill } = await request.json();
 
-    // Validate input
-    if (!query) {
+    const skillTrim = typeof skill === 'string' ? skill.trim() : '';
+
+    // Validate input — either semantic `query` or multi-namespace `skill` discovery (findBySkill)
+    if (!query && !skillTrim) {
       return NextResponse.json(
-        { success: false, error: 'query is required' },
+        { success: false, error: 'query or skill is required' },
         { status: 400 }
       );
     }
@@ -188,25 +269,29 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // If no repo specified, search across all repos
-    const repoToSearch = repo || undefined;
+    const repoToSearch = pineconeNamespaceFromRepo(
+      typeof repoBody === 'string' ? repoBody : undefined
+    );
+    const limitNum = Number.isFinite(Number(limit)) ? Math.max(1, Math.min(80, Number(limit))) : 5;
+
+    const ragKey = skillTrim
+      ? makeKey(repoToSearch ?? 'all', `__skill__:${skillTrim}`, limitNum)
+      : makeKey(repoToSearch ?? 'all', query as string, limitNum);
 
     if (process.env.DEBUG_RAG === '1') {
-      console.log('[rag]', repoToSearch ?? 'all', query.slice(0, 120));
+      console.log('[rag]', repoToSearch ?? 'all', skillTrim ? `skill:${skillTrim}` : query.slice(0, 120));
     }
-
-    const ragKey = makeKey(repoToSearch, query, limit);
 
     // Serve from Redis cache if fresh
     const cached = await cacheGet<any>(ragKey);
     if (cached) {
-      return NextResponse.json({ ...cached, cached: true });
+      return NextResponse.json({ ...sanitizeRagPayload(cached), cached: true });
     }
 
     // Deduplicate inflight for same key (in-memory, per-process)
     if (inflight.has(ragKey)) {
       const data = await inflight.get(ragKey)!;
-      return NextResponse.json({ ...data, deduped: true });
+      return NextResponse.json({ ...sanitizeRagPayload(data), deduped: true });
     }
 
     // Initialize Pinecone
@@ -217,7 +302,6 @@ export async function POST(request: NextRequest) {
     const indexName = getPineconeIndexName();
     const index = pinecone.index(indexName);
 
-    // Search GitHub repository using gh-rag with Pinecone
     const ghRag = createGhRag({
       openaiApiKey: process.env.OPENAI_API_KEY!,
       githubToken: process.env.GITHUB_TOKEN,
@@ -225,18 +309,57 @@ export async function POST(request: NextRequest) {
         index
       }
     });
-    
-    const p = ghRag.search({ repo: repoToSearch, query }).then(async (results) => {
-      const data = {
+
+    const p = (async () => {
+      if (skillTrim) {
+        // Queries every Pinecone namespace (per-repo vectors). hybridSearch without a repo only hits default NS.
+        const skillLimit = Math.max(12, Math.min(60, limitNum * 3));
+        let rows = await ghRag.findBySkill({ skill: skillTrim, limit: skillLimit });
+        if (repoToSearch) {
+          const ns = repoToSearch;
+          rows = rows.filter(
+            (r: { repo: string }) =>
+              r.repo === ns ||
+              r.repo.toLowerCase() === ns.toLowerCase() ||
+              r.repo.endsWith(`/${ns}`)
+          );
+        }
+        const snippets = rows.flatMap((r: { repo: string; techStack?: string[]; samplePaths?: string[]; score?: number }) => {
+          const paths =
+            Array.isArray(r.samplePaths) && r.samplePaths.length > 0 ? r.samplePaths.slice(0, 6) : [''];
+          return paths.map((path: string) => ({
+            repo: r.repo,
+            path: path || undefined,
+            text: path
+              ? `Stack match (${skillTrim}): ${(r.techStack || []).slice(0, 12).join(', ')}`
+              : `Repo match for ${skillTrim} (semantic + stack)`,
+            techStack: r.techStack || [],
+            score: r.score,
+          }));
+        });
+        const data = sanitizeRagPayload({
+          success: true,
+          repo: repoToSearch ?? null,
+          query: skillTrim,
+          skillSearch: true,
+          snippetsFound: snippets.length,
+          snippets,
+        });
+        await cacheSet(ragKey, data, RAG_TTL);
+        return data;
+      }
+
+      const results = await ghRag.search({ repo: repoToSearch, query });
+      const data = sanitizeRagPayload({
         success: true,
-        repo: repoToSearch,
+        repo: repoToSearch ?? null,
         query,
         snippetsFound: results?.length || 0,
-        snippets: results || []
-      };
+        snippets: results || [],
+      });
       await cacheSet(ragKey, data, RAG_TTL);
       return data;
-    }).finally(() => {
+    })().finally(() => {
       inflight.delete(ragKey);
     });
 
@@ -267,7 +390,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const url = new URL(request.url);
-    const repoParam = url.searchParams.get('repo') || undefined;
+    const repoParam = pineconeNamespaceFromRepo(url.searchParams.get('repo'));
     const query = url.searchParams.get('query') || '';
     const limitParam = url.searchParams.get('limit');
 
@@ -296,7 +419,6 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // If no repo specified, search across all repos
     const repoToSearch = repoParam || undefined;
 
     const limit = Number.isFinite(Number(limitParam)) ? Number(limitParam) : 5;
@@ -309,12 +431,12 @@ export async function GET(request: NextRequest) {
 
     const cached = await cacheGet<any>(ragKey);
     if (cached) {
-      return NextResponse.json({ ...cached, cached: true });
+      return NextResponse.json({ ...sanitizeRagPayload(cached), cached: true });
     }
 
     if (inflight.has(ragKey)) {
       const data = await inflight.get(ragKey)!;
-      return NextResponse.json({ ...data, deduped: true });
+      return NextResponse.json({ ...sanitizeRagPayload(data), deduped: true });
     }
 
     const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
@@ -328,13 +450,13 @@ export async function GET(request: NextRequest) {
     });
 
     const p = ghRag.search({ repo: repoToSearch, query }).then(async (results) => {
-      const data = {
+      const data = sanitizeRagPayload({
         success: true,
-        repo: repoToSearch,
+        repo: repoToSearch ?? null,
         query,
         snippetsFound: results?.length || 0,
-        snippets: results || []
-      };
+        snippets: results || [],
+      });
       await cacheSet(ragKey, data, RAG_TTL);
       return data;
     }).finally(() => {

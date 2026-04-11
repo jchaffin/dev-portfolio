@@ -85,9 +85,12 @@ export const VoiceTranscript: React.FC<VoiceTranscriptProps> = ({ items }) => {
       }));
   }, [projects]);
 
-  const filteredItems = items
-    .filter(item => item.type === "MESSAGE" && !item.isHidden && item.title?.replace(/[\s.…]+/g, '').length > 0)
-    .sort((a, b) => a.createdAtMs - b.createdAtMs);
+  const filteredItems = items.filter(
+    (item) =>
+      item.type === 'MESSAGE' &&
+      !item.isHidden &&
+      item.title?.replace(/[\s.…]+/g, '').length > 0
+  );
 
   return (
     <>

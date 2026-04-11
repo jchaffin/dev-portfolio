@@ -4,6 +4,7 @@ import React, {
   createContext,
   useContext,
   useState,
+  useRef,
   FC,
   PropsWithChildren,
   useCallback,
@@ -18,6 +19,8 @@ export interface TranscriptItem {
   expanded: boolean;
   timestamp: string;
   createdAtMs: number;
+  /** Monotonic receive order — display sorts by this, not clock time. */
+  insertSeq: number;
   status: 'IN_PROGRESS' | 'DONE';
   isHidden: boolean;
   guardrailResult?: {
@@ -36,7 +39,12 @@ interface TranscriptContextValue {
     text: string,
     isHidden?: boolean
   ) => void;
-  updateTranscriptMessage: (itemId: string, text: string, isDelta: boolean) => void;
+  updateTranscriptMessage: (
+    itemId: string,
+    text: string,
+    isDelta: boolean,
+    role?: 'user' | 'assistant'
+  ) => void;
   addTranscriptBreadcrumb: (title: string, data?: Record<string, unknown>) => void;
   toggleTranscriptItemExpand: (itemId: string) => void;
   updateTranscriptItem: (itemId: string, updatedProperties: Partial<TranscriptItem>) => void;
@@ -60,22 +68,39 @@ function generateId(): string {
 
 export const TranscriptProvider: FC<PropsWithChildren> = ({ children }) => {
   const [transcriptItems, setTranscriptItems] = useState<TranscriptItem[]>([]);
+  const insertSeqRef = useRef(0);
+
+  const nextInsertSeq = () => {
+    insertSeqRef.current += 1;
+    return insertSeqRef.current;
+  };
 
   const addTranscriptMessage = useCallback(
     (itemId: string, role: 'user' | 'assistant', text = '', isHidden = false) => {
       setTranscriptItems((prev) => {
-        if (prev.some((i) => i.itemId === itemId)) return prev;
+        const idx = prev.findIndex((i) => i.itemId === itemId && i.type === 'MESSAGE');
+        if (idx >= 0) {
+          const cur = prev[idx]!;
+          const mergedTitle =
+            text && text.replace(/[\s.…]+/g, '').length > 0 ? text : cur.title;
+          return prev.map((item, i) =>
+            i === idx
+              ? { ...cur, title: mergedTitle, role: role || cur.role, isHidden }
+              : item
+          );
+        }
         return [
           ...prev,
           {
             itemId,
-            type: 'MESSAGE',
+            type: 'MESSAGE' as const,
             role,
             title: text,
             expanded: false,
             timestamp: newTimestampPretty(),
             createdAtMs: Date.now(),
-            status: 'IN_PROGRESS',
+            insertSeq: nextInsertSeq(),
+            status: 'IN_PROGRESS' as const,
             isHidden,
           },
         ];
@@ -85,18 +110,39 @@ export const TranscriptProvider: FC<PropsWithChildren> = ({ children }) => {
   );
 
   const updateTranscriptMessage = useCallback(
-    (itemId: string, newText: string, append = false) => {
-      setTranscriptItems((prev) =>
-        prev.map((item) => {
+    (itemId: string, newText: string, append = false, role: 'user' | 'assistant' = 'user') => {
+      setTranscriptItems((prev) => {
+        const idx = prev.findIndex((i) => i.itemId === itemId && i.type === 'MESSAGE');
+        if (idx < 0) {
+          const stripped = newText.replace(/[\s.…]+/g, '');
+          if (!stripped) return prev;
+          return [
+            ...prev,
+            {
+              itemId,
+              type: 'MESSAGE' as const,
+              role,
+              title: newText,
+              expanded: false,
+              timestamp: newTimestampPretty(),
+              createdAtMs: Date.now(),
+              insertSeq: nextInsertSeq(),
+              status: 'IN_PROGRESS' as const,
+              isHidden: false,
+            },
+          ];
+        }
+        return prev.map((item) => {
           if (item.itemId === itemId && item.type === 'MESSAGE') {
             return {
               ...item,
               title: append ? (item.title ?? '') + newText : newText,
+              role: item.role ?? role,
             };
           }
           return item;
-        })
-      );
+        });
+      });
     },
     []
   );
@@ -113,6 +159,7 @@ export const TranscriptProvider: FC<PropsWithChildren> = ({ children }) => {
           expanded: false,
           timestamp: newTimestampPretty(),
           createdAtMs: Date.now(),
+          insertSeq: nextInsertSeq(),
           status: 'DONE',
           isHidden: false,
         },
@@ -141,6 +188,7 @@ export const TranscriptProvider: FC<PropsWithChildren> = ({ children }) => {
   );
 
   const clearTranscript = useCallback(() => {
+    insertSeqRef.current = 0;
     setTranscriptItems([]);
   }, []);
 

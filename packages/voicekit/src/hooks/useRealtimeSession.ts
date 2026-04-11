@@ -65,11 +65,13 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         historyHandlers.handleTranscriptionCompleted({
           item_id: data.itemId,
           transcript: text,
+          role: 'user',
         });
       } else if (data.delta) {
         historyHandlers.handleTranscriptionDelta({
           item_id: data.itemId,
           delta: data.delta,
+          role: 'user',
         });
       }
     });
@@ -80,11 +82,14 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         historyHandlers.handleTranscriptionCompleted({
           item_id: data.itemId,
           transcript: data.text || '',
+          role: 'assistant',
         });
       } else if (data.delta) {
-        historyHandlers.handleTranscriptionDelta(
-          { item_id: data.itemId, delta: data.delta }
-        );
+        historyHandlers.handleTranscriptionDelta({
+          item_id: data.itemId,
+          delta: data.delta,
+          role: 'assistant',
+        });
       }
     });
 
