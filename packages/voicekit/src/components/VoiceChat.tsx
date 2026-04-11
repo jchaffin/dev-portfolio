@@ -117,7 +117,7 @@ export function StatusIndicator({
 }: StatusIndicatorProps) {
   const { status } = useVoice();
 
-  const statusConfig = {
+  const statusConfig: Record<string, { color: string; text: string; pulse: boolean }> = {
     CONNECTED: { color: 'bg-green-500', text: connectedText, pulse: true },
     CONNECTING: { color: 'bg-yellow-500', text: connectingText, pulse: true },
     DISCONNECTED: { color: 'bg-gray-400', text: disconnectedText, pulse: false },

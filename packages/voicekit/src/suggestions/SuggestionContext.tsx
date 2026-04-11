@@ -49,8 +49,8 @@ export function SuggestionProvider({
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<SuggestionEventDetail>).detail;
-      if (detail?.group) {
-        setSuggestionsState(detail.group);
+      if (detail) {
+        setSuggestionsState(detail.group ?? null);
       }
     };
 

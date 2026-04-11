@@ -18,5 +18,11 @@ export {
 // Session history
 export { useSessionHistory } from './hooks/useSessionHistory';
 
+// VAD (Voice Activity Detection)
+export { useVAD, type VADConfig, type VADState, type UseVADReturn } from './hooks/useVAD';
+
+// Barge-in detection
+export { useBargeIn, type BargeInConfig, type UseBargeInReturn } from './hooks/useBargeIn';
+
 // Re-export useVoice from VoiceProvider
 export { useVoice } from './VoiceProvider';

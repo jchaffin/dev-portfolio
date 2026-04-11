@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { envConfig, DEFAULT_PINECONE_INDEX } from '@/lib/envConfig';
+import { envConfig, getPineconeIndexName } from '@/lib/envConfig';
 import { createGhRag } from '@jchaffin/gh-rag';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { cacheGet, cacheSet, cacheKey } from '@/lib/redis';
@@ -106,8 +106,7 @@ export async function PUT(request: NextRequest) {
       job.status = 'running';
       try {
         const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
-        const indexName =
-          process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX || DEFAULT_PINECONE_INDEX;
+        const indexName = getPineconeIndexName();
         const index = pinecone.index(indexName);
 
         const ghRag = createGhRag({
@@ -192,7 +191,9 @@ export async function POST(request: NextRequest) {
     // If no repo specified, search across all repos
     const repoToSearch = repo || undefined;
 
-    console.log('🔧 RAG API: Searching', repoToSearch ? `repo: ${repoToSearch}` : 'all repos', 'for query:', query);
+    if (process.env.DEBUG_RAG === '1') {
+      console.log('[rag]', repoToSearch ?? 'all', query.slice(0, 120));
+    }
 
     const ragKey = makeKey(repoToSearch, query, limit);
 
@@ -213,8 +214,7 @@ export async function POST(request: NextRequest) {
       apiKey: process.env.PINECONE_API_KEY!
     });
     
-    const indexName =
-      process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX || DEFAULT_PINECONE_INDEX;
+    const indexName = getPineconeIndexName();
     const index = pinecone.index(indexName);
 
     // Search GitHub repository using gh-rag with Pinecone
@@ -301,7 +301,9 @@ export async function GET(request: NextRequest) {
 
     const limit = Number.isFinite(Number(limitParam)) ? Number(limitParam) : 5;
 
-    console.log('🔧 RAG API (GET): Searching', repoToSearch ? `repo: ${repoToSearch}` : 'all repos', 'for query:', query);
+    if (process.env.DEBUG_RAG === '1') {
+      console.log('[rag:GET]', repoToSearch ?? 'all', query.slice(0, 120));
+    }
 
     const ragKey = makeKey(repoToSearch, query, limit);
 
@@ -316,8 +318,7 @@ export async function GET(request: NextRequest) {
     }
 
     const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
-    const indexName =
-      process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX || DEFAULT_PINECONE_INDEX;
+    const indexName = getPineconeIndexName();
     const index = pinecone.index(indexName);
 
     const ghRag = createGhRag({

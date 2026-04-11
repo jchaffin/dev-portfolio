@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pinecone, type RecordMetadata } from '@pinecone-database/pinecone';
 import OpenAI from 'openai';
+import { getPineconeIndexName } from '@/lib/envConfig';
 import fs from 'fs';
 import path from 'path';
 
@@ -104,7 +105,7 @@ export async function PUT(request: NextRequest) {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
-    const indexName = process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX;
+    const indexName = getPineconeIndexName();
     const index = pinecone.index(indexName);
 
     // Get target directory
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
-    const indexName = process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX;
+    const indexName = getPineconeIndexName();
     const index = pinecone.index(indexName);
 
     // Generate query embedding

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { envConfig } from '@/lib/envConfig';
+import { envConfig, getPineconeIndexName } from '@/lib/envConfig';
 import { createGhRag } from '@jchaffin/gh-rag';
 import { Pinecone } from '@pinecone-database/pinecone';
 
@@ -51,9 +51,9 @@ export async function GET(request: NextRequest) {
   const token = process.env.GITHUB_TOKEN;
   const openaiKey = process.env.OPENAI_API_KEY;
   const pineconeKey = process.env.PINECONE_API_KEY;
-  const indexName = process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX;
+  const indexName = getPineconeIndexName();
 
-  if (!token || !openaiKey || !pineconeKey || !indexName) {
+  if (!token || !openaiKey || !pineconeKey) {
     return NextResponse.json({ error: 'Missing required env vars' }, { status: 500 });
   }
 

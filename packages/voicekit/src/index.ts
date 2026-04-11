@@ -67,7 +67,16 @@ export {
 } from './components';
 
 // Agent Creation
-export { createAgent, createAgentFromTemplate } from './createAgent';
+export {
+  createAgent,
+  createAgentFromTemplate,
+  AgentBuilder,
+  agent,
+  loggingMiddleware,
+  rateLimitMiddleware,
+  retryMiddleware,
+  timeoutMiddleware,
+} from './createAgent';
 
 // Tool Utilities
 export {
@@ -88,8 +97,15 @@ export {
   useAudioRecorder,
   useRealtimeSession,
   useSessionHistory,
+  useVAD,
+  useBargeIn,
   type RealtimeSessionCallbacks,
   type ConnectOptions,
+  type VADConfig,
+  type VADState,
+  type UseVADReturn,
+  type BargeInConfig,
+  type UseBargeInReturn,
 } from './hooks';
 
 // Contexts
@@ -132,14 +148,62 @@ export {
   type SuggestionType,
   type SuggestionsContextValue,
   type SuggestionChipsProps,
+  type SuggestionEventDetail,
 } from './suggestions';
 
 // Audio Utilities
 export {
+  // WAV
   convertWebMToWav,
   encodeWAV,
+  encodeWAVFromPcm16,
+  // PCM conversion
+  float32ToPcm16,
+  pcm16ToFloat32,
+  pcm16ToBytes,
+  bytesToPcm16,
+  // Base64
+  pcm16ToBase64,
+  base64ToPcm16,
+  float32ToBase64,
+  base64ToFloat32,
+  // Resampling (windowed sinc)
+  resample,
+  resamplePcm16,
+  upsample8kTo16k,
+  upsample8kTo16kPcm16,
+  downsample16kTo8k,
+  upsample8kTo48k,
+  // Pitch / speed
+  shiftPitch,
+  shiftPitchSemitones,
+  changeSpeed,
+  // Gain / normalization
+  applyGain,
+  normalize,
+  // Filters / EQ
+  lowpass,
+  highpass,
+  bandpass,
+  peakingEQ,
+  voicePresenceBoost,
+  deEss,
+  telephoneFilter,
+  // G.711 codecs
+  encodeMulaw,
+  decodeMulaw,
+  encodeAlaw,
+  decodeAlaw,
+  // Energy / analysis
+  rmsEnergy,
+  rmsEnergyPcm16,
+  dbFS,
+  // Codec helpers
   audioFormatForCodec,
   applyCodecPreferences,
+  // Channel mixing
+  stereoToMono,
+  monoToStereo,
 } from './utils';
 
 // Types (local)
@@ -154,13 +218,20 @@ export type {
   VoiceProviderProps,
 } from './types';
 
+export { VoiceStatusEnum } from './types';
+
 // Core types (provider-agnostic interfaces)
 export type {
   VoiceAdapter,
   VoiceSession,
   VoiceAgentConfig,
+  ToolMiddleware,
   SessionEvents,
   TranscriptData,
+  VADEvent,
+  BargeInEvent,
+  AudioEncoding,
+  AudioFormat,
   ConnectConfig,
   SessionOptions,
   ServerAdapter,

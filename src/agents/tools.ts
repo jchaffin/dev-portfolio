@@ -122,10 +122,10 @@ export const getProjects = defineTool({
 
 export const searchProject = defineTool({
   name: 'search_project',
-  description: 'Search across all of Jacob\'s project codebases for implementation details, code patterns, and technical context. Searches all repos by default, or a specific repo if provided.',
+  description: 'Search ingested GitHub source code (RAG). Only for implementation/code questions — not overviews. Slow.',
   parameters: {
-    query: { type: 'string', description: 'Search query (e.g., "Kafka event streaming", "React hooks state management")' },
-    repo: { type: 'string', description: 'Optional: filter by specific repository name' }
+    query: { type: 'string', description: 'Technical/code search query' },
+    repo: { type: 'string', description: 'Optional: filter by repository short name' }
   },
   required: ['query'],
   execute: async ({ query, repo }: { query: string; repo?: string }) => {
@@ -133,7 +133,7 @@ export const searchProject = defineTool({
       const res = await fetch('/api/rag', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, repo, limit: 10 })
+        body: JSON.stringify({ query, repo, limit: 5 })
       });
 
       if (!res.ok) return { success: false, error: `Search failed (${res.status})` };
@@ -176,7 +176,7 @@ export const findProjectsByTech = defineTool({
       const ragRes = await fetch('/api/rag', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: `${technology} implementation`, limit: 50 })
+        body: JSON.stringify({ query: `${technology} implementation`, limit: 20 })
       });
       
       if (!ragRes.ok) return { success: false, error: 'Search failed' };
@@ -264,100 +264,98 @@ export const getExperience = defineTool({
 
 export const searchExperience = defineTool({
   name: 'search_experience',
-  description: 'Search Jacob\'s work experience by company name, project name, or technology. Use this to find details about specific roles or projects like Sparke, Studyfetch, Prosody, etc.',
+  description: 'Search work experience — resume AND knowledge base docs. Returns resume summary and deeper documents.',
   parameters: {
-    query: { type: 'string', description: 'Company name, project name, or technology to search for (e.g., "Studyfetch", "Sparke", "LiveKit", "Kafka")' }
+    query: { type: 'string', description: 'Company, project, role, or technology to search for' },
+    company: { type: 'string', description: 'Optional: filter knowledge docs by company folder' }
   },
   required: ['query'],
-  execute: ({ query }: { query: string }) => {
+  execute: async ({ query, company }: { query: string; company?: string }) => {
     const q = query.toLowerCase();
-    
-    const matches = resumeData.experience.filter(exp => {
-      const searchableText = [
-        exp.company,
-        exp.role,
-        exp.description,
+
+    // 1) Instant: local resume match (experience + projects)
+    const expMatches = resumeData.experience.filter(exp => {
+      const text = [
+        exp.company, exp.role, exp.description,
         (exp as any).projectName || '',
         ...((exp as any).aliases || []),
         ...(exp.keywords || [])
       ].join(' ').toLowerCase();
-      
-      return searchableText.includes(q);
+      return text.includes(q);
     });
-    
-    if (matches.length === 0) {
-      return { 
-        success: true, 
-        query, 
-        found: false, 
-        message: `No experience found matching "${query}"` 
-      };
-    }
-    
-    const results = matches.map(exp => ({
+
+    const projMatches = ((resumeData as any).projects || []).filter((p: any) => {
+      const text = [p.name, p.description || '', ...(p.keywords || [])].join(' ').toLowerCase();
+      return text.includes(q);
+    });
+
+    const resumeResults = expMatches.map(exp => ({
+      source: 'resume' as const,
       company: exp.company,
       role: exp.role,
       period: `${exp.startDate}–${exp.endDate || 'Present'}`,
       location: exp.location,
-      projectName: (exp as any).projectName || null,
-      aliases: (exp as any).aliases || [],
       description: exp.description,
       technologies: exp.keywords || [],
       website: (exp as any).website || null,
-      isCurrentRole: (exp as any).isCurrentRole || false
+      isCurrentRole: (exp as any).isCurrentRole || false,
     }));
-    
-    emitSuggestions({
-      type: 'experience',
-      prompt: `Experience matching "${query}":`,
-      items: results.map(e => ({
-        id: e.company.toLowerCase().replace(/\s+/g, '-'),
-        label: e.company,
-        message: `Tell me about the ${e.role} role at ${e.company}`,
-        description: e.role,
-        meta: { period: e.period, location: e.location, projectName: e.projectName, technologies: e.technologies },
-      })),
-    });
-    
-    return { success: true, query, found: true, resultCount: results.length, experiences: results };
-  }
-});
 
-// ============================================================================
-// Knowledge Base Search (PDFs, docs, notes from past work)
-// ============================================================================
+    const projectResults = projMatches.map((p: any) => ({
+      source: 'resume_project' as const,
+      name: p.name,
+      description: p.description || '',
+      tech: p.keywords || [],
+      github: p.github || '',
+      website: p.website || '',
+    }));
 
-export const searchKnowledge = defineTool({
-  name: 'search_knowledge',
-  description: 'Search Jacob\'s knowledge base for in-depth information about his work at specific companies. Contains PDFs, documents, notes, and detailed materials from Uniphore, Wave Computing, Prosody, Studyfetch, etc. Use this for deep-dive questions about specific roles or projects.',
-  parameters: {
-    query: { type: 'string', description: 'Search query (e.g., "ASR pipeline architecture", "DPU compiler optimization", "sentiment visualization")' },
-    company: { type: 'string', description: 'Optional: filter by company (uniphore, wave-computing, prosody, studyfetch)' }
-  },
-  required: ['query'],
-  execute: async ({ query, company }: { query: string; company?: string }) => {
+    // 2) Parallel: knowledge base search (Pinecone, GCS-ingested docs)
+    let knowledgeResults: any[] = [];
     try {
       const res = await fetch('/api/knowledge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, company, limit: 10 })
+        body: JSON.stringify({ query, company, limit: 5 })
       });
-      
-      if (!res.ok) {
-        return { success: false, error: `Knowledge search failed (${res.status})` };
+      if (res.ok) {
+        const data = await res.json();
+        knowledgeResults = (data.results || []).map((r: any) => ({
+          source: 'knowledge' as const,
+          text: r.text,
+          company: r.company,
+          filename: r.filename,
+          score: r.score,
+        }));
       }
-      
-      const data = await res.json();
-      return { 
-        success: true, 
-        query,
-        company: company || 'all',
-        resultsFound: data.resultsFound || 0,
-        results: data.results || []
-      };
     } catch {
-      return { success: false, error: 'Knowledge search failed' };
+      // Knowledge base unavailable — resume results are still returned
     }
+
+    const found = resumeResults.length > 0 || projectResults.length > 0 || knowledgeResults.length > 0;
+
+    if (found && resumeResults.length > 0) {
+      emitSuggestions({
+        type: 'experience',
+        prompt: `Experience matching "${query}":`,
+        items: resumeResults.map(e => ({
+          id: e.company.toLowerCase().replace(/\s+/g, '-'),
+          label: e.company,
+          message: `Tell me about the ${e.role} role at ${e.company}`,
+          description: e.role,
+          meta: { period: e.period, technologies: e.technologies },
+        })),
+      });
+    }
+
+    return {
+      success: true,
+      query,
+      found,
+      resume: resumeResults,
+      projects: projectResults,
+      knowledge: knowledgeResults,
+    };
   }
 });
 
@@ -450,7 +448,6 @@ export const allTools = [
   findProjectsByTech,
   getExperience,
   searchExperience,
-  searchKnowledge,
   getSkills,
   showSuggestions
 ];

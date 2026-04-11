@@ -45,7 +45,7 @@ export function clearSuggestions(): void {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(
     new CustomEvent<SuggestionEventDetail>(SUGGESTION_EVENT, {
-      detail: { group: null as any },
+      detail: { group: null },
     })
   );
 }

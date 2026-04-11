@@ -137,12 +137,16 @@ class OpenAISession
       await new Promise<void>((resolve) => {
         const onDone = (event: Record<string, unknown>) => {
           if ((event as any).type === 'response.done' || (event as any).type === 'response.cancelled') {
+            clearTimeout(timeoutId);
             this.off('raw_event', onDone as any);
             resolve();
           }
         };
         this.on('raw_event', onDone as any);
-        setTimeout(resolve, 1500);
+        const timeoutId = setTimeout(() => {
+          this.off('raw_event', onDone as any);
+          resolve();
+        }, 1500);
       });
     }
 

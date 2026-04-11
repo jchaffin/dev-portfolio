@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 import { audioFormatForCodec, applyCodecPreferences } from '../utils/audio';
 import { useEvent } from '../contexts/EventContext';
 import { useSessionHistory } from './useSessionHistory';
+import { VoiceStatusEnum } from '../core/types';
 import type { VoiceStatus } from '../types';
 import type { VoiceAdapter, VoiceSession, VoiceAgentConfig } from '../core/types';
 
@@ -25,17 +26,19 @@ export interface ConnectOptions {
 
 export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   const sessionRef = useRef<VoiceSession | null>(null);
-  const [status, setStatus] = useState<VoiceStatus>('DISCONNECTED');
+  const [status, setStatus] = useState<VoiceStatus>(VoiceStatusEnum.DISCONNECTED);
   const { logClientEvent, logServerEvent } = useEvent();
   const codecParamRef = useRef<string>('opus');
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
 
   const updateStatus = useCallback(
     (s: VoiceStatus) => {
       setStatus(s);
-      callbacks.onConnectionChange?.(s);
+      callbacksRef.current.onConnectionChange?.(s);
       logClientEvent({}, s);
     },
-    [callbacks, logClientEvent]
+    [logClientEvent]
   );
 
   const historyHandlers = useSessionHistory().current;
@@ -103,7 +106,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     });
 
     session.on('agent_handoff', (_from, to) => {
-      callbacks.onAgentHandoff?.(to);
+      callbacksRef.current.onAgentHandoff?.(to);
     });
 
     session.on('guardrail_tripped', (info) => {
@@ -119,7 +122,23 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
       if (ev.type === 'conversation.item.truncated') {
         const itemId = ev.item_id as string;
-        if (itemId) interruptedRef.current.add(itemId);
+        if (itemId) {
+          interruptedRef.current.add(itemId);
+
+          // The server already truncated the model's conversation history.
+          // handleTruncation uses the accumulated transcript deltas as
+          // ground truth — whatever the STT stream confirmed = what was
+          // spoken. No audio-fraction estimation.
+          const truncResult = historyHandlers.handleTruncation(itemId);
+
+          if (truncResult) {
+            logServerEvent({
+              type: 'barge_in',
+              interruptedItemId: itemId,
+              spokenText: truncResult.spokenText,
+            });
+          }
+        }
         return;
       }
 
@@ -150,7 +169,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       console.error('Session error:', msg);
       logServerEvent({ type: 'error', message: msg });
     });
-  }, [callbacks, historyHandlers, logServerEvent]);
+  }, [historyHandlers, logServerEvent]);
 
   const connect = useCallback(
     async ({
@@ -169,8 +188,11 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
           'Pass an adapter like openai() from @jchaffin/voicekit/openai.'
         );
       }
+      if (!initialAgents?.length) {
+        throw new Error('useRealtimeSession: `initialAgents` must be a non-empty array.');
+      }
 
-      updateStatus('CONNECTING');
+      updateStatus(VoiceStatusEnum.CONNECTING);
 
       const ek = await getEphemeralKey();
       const rootAgent = initialAgents[0];
@@ -191,11 +213,11 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
           context: extraContext,
           outputGuardrails,
         });
-        updateStatus('CONNECTED');
+        updateStatus(VoiceStatusEnum.CONNECTED);
       } catch (connectError) {
         console.error('Connection error:', connectError);
         sessionRef.current = null;
-        updateStatus('DISCONNECTED');
+        updateStatus(VoiceStatusEnum.DISCONNECTED);
         throw connectError;
       }
     },
@@ -210,10 +232,10 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         console.error('Error closing session:', error);
       } finally {
         sessionRef.current = null;
-        updateStatus('DISCONNECTED');
+        updateStatus(VoiceStatusEnum.DISCONNECTED);
       }
     } else {
-      updateStatus('DISCONNECTED');
+      updateStatus(VoiceStatusEnum.DISCONNECTED);
     }
   }, [updateStatus]);
 

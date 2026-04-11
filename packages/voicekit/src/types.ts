@@ -1,10 +1,12 @@
-import type { VoiceAgentConfig, VoiceAdapter } from './core/types';
+import type { VoiceAgentConfig, VoiceAdapter, VoiceStatus } from './core/types';
 
 // ============================================================================
 // Status & Connection
 // ============================================================================
 
-export type VoiceStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED';
+// Re-export from core so consumers don't need two imports
+export type { VoiceStatus } from './core/types';
+export { VoiceStatusEnum } from './core/types';
 
 // ============================================================================
 // Transcript

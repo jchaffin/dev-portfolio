@@ -13,14 +13,18 @@ export function useSessionHistory() {
     updateTranscriptItem,
   } = useTranscript();
 
+  const transcriptItemsRef = useRef(transcriptItems);
+  transcriptItemsRef.current = transcriptItems;
+
   const { logServerEvent } = useEvent();
+
+  // The transcription ground truth: text confirmed by the STT/transcript
+  // delta stream. On barge-in, this is exactly what was spoken — no guessing.
   const accumulatedTextRef = useRef<Map<string, string>>(new Map());
+
   const pendingDeltasRef = useRef<Map<string, string[]>>(new Map());
   const deltaTimerRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const interruptedItemsRef = useRef<Set<string>>(new Set());
-  
-  // Audio tracking for barge-in
-  const totalAudioDurationRef = useRef<Map<string, number>>(new Map());
 
   const extractMessageText = (content: unknown[] = []): string => {
     if (!Array.isArray(content)) return '';
@@ -103,7 +107,6 @@ export function useSessionHistory() {
     if (itemId && role) {
       let text = extractMessageText(content);
       
-      // For assistant messages, start with empty text - deltas will fill it in sync with audio
       if (role === 'assistant' && !text) {
         text = '';
       } else if (role === 'user' && !text) {
@@ -125,10 +128,7 @@ export function useSessionHistory() {
       if (!item || item.type !== 'message') return;
       const { itemId, role, content = [] } = item as { itemId: string; role?: string; content: unknown[] };
       
-      // Skip if this item was interrupted
       if (interruptedItemsRef.current.has(itemId)) return;
-      
-      // For assistant messages, NEVER update from history - let delta handler control everything
       if (role === 'assistant') return;
       
       const text = extractMessageText(content);
@@ -138,28 +138,15 @@ export function useSessionHistory() {
     });
   }
 
-  // Track pending text buffer (not individual deltas)
-  const pendingTextRef = useRef<Map<string, string>>(new Map());
-  const displayedTextRef = useRef<Map<string, string>>(new Map());
-  
-  function handleTranscriptionDelta(item: Record<string, unknown>, audioPositionMs?: number) {
+  function handleTranscriptionDelta(item: Record<string, unknown>) {
     const itemId = item.item_id as string;
     const deltaText = (item.delta as string) || '';
     if (!itemId || !deltaText) return;
     
-    // Skip if this item was interrupted
     if (interruptedItemsRef.current.has(itemId)) return;
 
-    // Accumulate and show text
     const text = (accumulatedTextRef.current.get(itemId) || '') + deltaText;
     accumulatedTextRef.current.set(itemId, text);
-    pendingTextRef.current.set(itemId, text);
-    displayedTextRef.current.set(itemId, text);
-    
-    // Track audio duration for barge-in
-    if (audioPositionMs !== undefined && audioPositionMs > 0) {
-      totalAudioDurationRef.current.set(itemId, audioPositionMs);
-    }
 
     if (text.replace(/[\s.…]+/g, '').length === 0) return;
     updateTranscriptMessage(itemId, text, false);
@@ -168,30 +155,25 @@ export function useSessionHistory() {
   function handleTranscriptionCompleted(item: Record<string, unknown>) {
     const itemId = item.item_id as string;
     
-    // Skip if this item was interrupted
     if (interruptedItemsRef.current.has(itemId)) return;
     
     if (itemId) {
-      // Clear any pending timer and buffers
+      const accumulatedText = accumulatedTextRef.current.get(itemId);
+
       const timer = deltaTimerRef.current.get(itemId);
       if (timer) clearTimeout(timer);
       deltaTimerRef.current.delete(itemId);
       pendingDeltasRef.current.delete(itemId);
-      pendingTextRef.current.delete(itemId);
-      displayedTextRef.current.delete(itemId);
       accumulatedTextRef.current.delete(itemId);
-      totalAudioDurationRef.current.delete(itemId);
-      
-      // Use whatever was displayed, or fall back to server transcript
-      const displayedText = displayedTextRef.current.get(itemId);
-      const finalText = displayedText || (item.transcript as string) || '';
+
+      const finalText = accumulatedText || (item.transcript as string) || '';
       const stripped = finalText.replace(/[\s.…]+/g, '');
       if (stripped.length > 0) {
         updateTranscriptMessage(itemId, finalText, false);
       }
       
       updateTranscriptItem(itemId, { status: 'DONE' });
-      const transcriptItem = transcriptItems.find((i) => i.itemId === itemId);
+      const transcriptItem = transcriptItemsRef.current.find((i) => i.itemId === itemId);
 
       if (transcriptItem?.guardrailResult?.status === 'IN_PROGRESS') {
         updateTranscriptItem(itemId, {
@@ -220,8 +202,9 @@ export function useSessionHistory() {
       const category = (moderation.moderationCategory as string) ?? 'NONE';
       const rationale = (moderation.moderationRationale as string) ?? '';
       const offendingText = moderation.testText as string | undefined;
+      const assistantItemId = (lastAssistant.itemId ?? (lastAssistant as Record<string, unknown>).id) as string;
 
-      updateTranscriptItem(lastAssistant.itemId as string, {
+      updateTranscriptItem(assistantItemId, {
         guardrailResult: {
           status: 'DONE',
           category,
@@ -232,10 +215,6 @@ export function useSessionHistory() {
     }
   }
 
-  // Keep a ref to latest transcriptItems for use in callbacks
-  const transcriptItemsRef = useRef(transcriptItems);
-  transcriptItemsRef.current = transcriptItems;
-
   const handlersRef = useRef({
     handleAgentToolStart,
     handleAgentToolEnd,
@@ -244,61 +223,42 @@ export function useSessionHistory() {
     handleTranscriptionDelta,
     handleTranscriptionCompleted,
     isInterrupted: (itemId: string) => interruptedItemsRef.current.has(itemId),
-    handleTruncation: (itemId: string, audioEndMs: number, totalAudioMs: number) => {
-      // Skip if already interrupted
-      if (interruptedItemsRef.current.has(itemId)) return;
-      // Clear any pending timer for the interrupted item
+
+    /**
+     * Handle barge-in. The accumulated transcript deltas are the ground truth
+     * of what was spoken — they arrive in sync with audio from the STT stream.
+     * Whatever is in accumulatedTextRef at this moment = what the user heard.
+     * Whatever isn't = never spoken. No audio-fraction guessing needed.
+     *
+     * The server (OpenAI, etc.) already truncates its own conversation history
+     * at the audio level. We just need our local display to match.
+     */
+    handleTruncation: (itemId: string): { spokenText: string; fullText: string } | null => {
+      if (interruptedItemsRef.current.has(itemId)) return null;
+
       const timer = deltaTimerRef.current.get(itemId);
       if (timer) clearTimeout(timer);
       deltaTimerRef.current.delete(itemId);
-      
-      // Get the full text that was supposed to be spoken
-      const fullText = pendingTextRef.current.get(itemId) || accumulatedTextRef.current.get(itemId) || '';
-      
-      // Clear refs
-      pendingDeltasRef.current.delete(itemId);
-      pendingTextRef.current.delete(itemId);
-displayedTextRef.current.delete(itemId);
-      accumulatedTextRef.current.delete(itemId);
-      totalAudioDurationRef.current.delete(itemId);
 
-      // Mark as interrupted so future updates are ignored
+      // Ground truth: text confirmed by the transcription stream
+      const spokenText = (accumulatedTextRef.current.get(itemId) || '').trim();
+
+      // We don't know the "full intended text" since it was still streaming,
+      // but spokenText is what matters — it's what was actually transcribed.
+      const fullText = spokenText;
+
+      pendingDeltasRef.current.delete(itemId);
+      accumulatedTextRef.current.delete(itemId);
       interruptedItemsRef.current.add(itemId);
-      
-      if (!fullText || totalAudioMs <= 0) {
-        // No text or audio data - hide
-        updateTranscriptItem(itemId, { isHidden: true, status: 'DONE' });
-        return;
-      }
-      
-      // Calculate what fraction of audio was actually played
-      const fractionSpoken = Math.min(Math.max(audioEndMs / totalAudioMs, 0), 1);
-      
-      // Estimate text position based on audio fraction
-      const estimatedCharPos = Math.floor(fullText.length * fractionSpoken);
-      
-      // Find nearest word boundary (don't cut mid-word)
-      let truncatePos = estimatedCharPos;
-      while (truncatePos > 0 && !/\s/.test(fullText[truncatePos - 1])) {
-        truncatePos--;
-      }
-      
-      // If we went to 0, try forward instead
-      if (truncatePos === 0 && estimatedCharPos > 0) {
-        truncatePos = estimatedCharPos;
-        while (truncatePos < fullText.length && !/\s/.test(fullText[truncatePos])) {
-          truncatePos++;
-        }
-      }
-      
-      const truncatedText = fullText.slice(0, truncatePos).trim();
-      
-      if (truncatedText.length > 0) {
-        updateTranscriptMessage(itemId, truncatedText + '...', false);
+
+      if (spokenText.length > 0) {
+        updateTranscriptMessage(itemId, spokenText + '...', false);
         updateTranscriptItem(itemId, { status: 'DONE' });
       } else {
         updateTranscriptItem(itemId, { isHidden: true, status: 'DONE' });
       }
+
+      return { spokenText, fullText };
     },
     handleGuardrailTripped,
   });

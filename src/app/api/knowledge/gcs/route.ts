@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Storage } from '@google-cloud/storage';
 import { Pinecone } from '@pinecone-database/pinecone';
 import OpenAI from 'openai';
+import { getPineconeIndexName } from '@/lib/envConfig';
 
 // Use text-embedding-3-large to match 3072 dim index
 const EMBEDDING_MODEL = 'text-embedding-3-large';
@@ -142,15 +143,7 @@ export async function PUT(request: NextRequest) {
     const bucket = storage.bucket(BUCKET_NAME);
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
-    const indexName = process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX;
-    
-    if (!indexName) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing PINECONE_INDEX_NAME or PINECONE_INDEX env var',
-      }, { status: 500 });
-    }
-    
+    const indexName = getPineconeIndexName();
     const index = pinecone.index(indexName);
 
     // List files

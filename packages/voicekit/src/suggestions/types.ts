@@ -60,5 +60,6 @@ export interface SuggestionsContextValue {
 export const SUGGESTION_EVENT = 'voicekit:suggestions';
 
 export interface SuggestionEventDetail {
-  group: SuggestionGroup;
+  /** New group to show, or null to clear */
+  group: SuggestionGroup | null;
 }

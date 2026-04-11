@@ -13,6 +13,7 @@ import type {
   VoiceSession,
   VoiceAgentConfig,
 } from './core/types';
+import { VoiceStatusEnum } from './core/types';
 import type {
   VoiceStatus,
   TranscriptMessage,
@@ -58,13 +59,13 @@ export function VoiceProvider({
   onToolCall,
   onError,
 }: VoiceProviderProps) {
-  const [status, setStatus] = useState<VoiceStatus>('DISCONNECTED');
+  const [status, setStatus] = useState<VoiceStatus>(VoiceStatusEnum.DISCONNECTED);
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [isMuted, setIsMuted] = useState(false);
 
   const sessionRef = useRef<VoiceSession | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const statusRef = useRef<VoiceStatus>('DISCONNECTED');
+  const statusRef = useRef<VoiceStatus>(VoiceStatusEnum.DISCONNECTED);
   const currentMsgIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -184,16 +185,16 @@ export function VoiceProvider({
   }, [sessionEndpoint]);
 
   const connect = useCallback(async () => {
-    if (statusRef.current !== 'DISCONNECTED') return;
+    if (statusRef.current !== VoiceStatusEnum.DISCONNECTED) return;
     if (!audioRef.current) return;
 
-    updateStatus('CONNECTING');
+    updateStatus(VoiceStatusEnum.CONNECTING);
 
     try {
       const token = await fetchToken();
       if (!token) {
         onError?.(new Error('Failed to get session key'));
-        updateStatus('DISCONNECTED');
+        updateStatus(VoiceStatusEnum.DISCONNECTED);
         return;
       }
 
@@ -207,7 +208,7 @@ export function VoiceProvider({
         audioElement: audioRef.current,
       });
 
-      updateStatus('CONNECTED');
+      updateStatus(VoiceStatusEnum.CONNECTED);
 
       // Trigger initial greeting
       setTimeout(() => {
@@ -215,8 +216,15 @@ export function VoiceProvider({
       }, 500);
     } catch (error) {
       console.error('VoiceKit connection failed:', error);
+      try {
+        await sessionRef.current?.disconnect();
+      } catch {
+        // ignore
+      }
+      sessionRef.current = null;
+      currentMsgIdRef.current = null;
       onError?.(error instanceof Error ? error : new Error(String(error)));
-      updateStatus('DISCONNECTED');
+      updateStatus(VoiceStatusEnum.DISCONNECTED);
     }
   }, [adapter, agent, model, language, fetchToken, wireSessionEvents, updateStatus, onError]);
 
@@ -230,11 +238,11 @@ export function VoiceProvider({
       sessionRef.current = null;
     }
     currentMsgIdRef.current = null;
-    updateStatus('DISCONNECTED');
+    updateStatus(VoiceStatusEnum.DISCONNECTED);
   }, [updateStatus]);
 
   const sendMessage = useCallback((text: string) => {
-    if (!sessionRef.current || statusRef.current !== 'CONNECTED') return;
+    if (!sessionRef.current || statusRef.current !== VoiceStatusEnum.CONNECTED) return;
     sessionRef.current.interrupt();
     sessionRef.current.sendMessage(text);
   }, []);
