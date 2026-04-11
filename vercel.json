@@ -7,10 +7,6 @@
     }
   ],
   "functions": {
-    "src/app/api/cron/ingest/route.ts": {
-      "memory": 1024,
-      "maxDuration": 300
-    },
     "src/app/api/cron/**/*.ts": {
       "memory": 1024,
       "maxDuration": 300
