@@ -9,7 +9,7 @@
     "start:built": "node dist/ingest.js"
   },
   "dependencies": {
-    "@jchaffin/gh-rag": "^0.2.2",
+    "@jchaffin/gh-rag": "^0.3.9",
     "@pinecone-database/pinecone": "^6.1.2"
   },
   "devDependencies": {

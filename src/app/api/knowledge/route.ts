@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pinecone } from '@pinecone-database/pinecone';
+import { Pinecone, type RecordMetadata } from '@pinecone-database/pinecone';
 import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
@@ -16,6 +16,7 @@ const NAMESPACE = 'knowledge';
 const SUPPORTED_EXTENSIONS = ['.md', '.txt', '.pdf', '.json'];
 
 interface ChunkMetadata {
+  text: string;
   company: string;
   filename: string;
   filepath: string;
@@ -161,7 +162,7 @@ export async function PUT(request: NextRequest) {
             chunkIndex: i,
             totalChunks: chunks.length,
             source: 'knowledge',
-          } as ChunkMetadata,
+          } as RecordMetadata,
         }));
 
         // Upsert to Pinecone

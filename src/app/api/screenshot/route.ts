@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   const cached = await cacheGetBuffer(key);
   if (cached) {
-    return new NextResponse(cached, {
+    return new NextResponse(new Uint8Array(cached), {
       headers: {
         'Content-Type': 'image/jpeg',
         'Cache-Control': 'public, max-age=86400, s-maxage=86400',
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     await cacheSetBuffer(key, Buffer.from(screenshot), TTL_SECONDS);
 
-    return new NextResponse(screenshot, {
+    return new NextResponse(new Uint8Array(screenshot), {
       headers: {
         'Content-Type': 'image/jpeg',
         'Cache-Control': 'public, max-age=86400, s-maxage=86400',

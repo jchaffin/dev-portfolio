@@ -1,10 +1,9 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Document, Page, pdfjs } from 'react-pdf'
+import { Document, Page, pdfjs, type DocumentProps } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
-import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 // Configure PDF.js worker
 if (typeof window !== 'undefined') {
@@ -42,7 +41,7 @@ function PDFViewer({ pdfUrl, title: _title = 'PDF Document', className = '' }: P
     setError(null)
   }, [pdfUrl])
 
-  function onDocLoad ({ numPages: nextNumPages }: PDFDocumentProxy): void {
+  const onDocLoad: NonNullable<DocumentProps['onLoadSuccess']> = ({ numPages: nextNumPages }) => {
     setNumPages(nextNumPages);
     setLoading(false);
     setError(null);

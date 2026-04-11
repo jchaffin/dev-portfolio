@@ -10,8 +10,8 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    seed: "npx tsx prisma/seed.ts",
   },
-  seed: "npx tsx prisma/seed.ts",
   datasource: {
     url: process.env["DATABASE_URL"] ?? process.env["POSTGRESQL_URI"] ?? process.env["POSTGRES_URL"],
   },

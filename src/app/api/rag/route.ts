@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { envConfig } from '@/lib/envConfig';
+import { envConfig, DEFAULT_PINECONE_INDEX } from '@/lib/envConfig';
 import { createGhRag } from '@jchaffin/gh-rag';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { cacheGet, cacheSet, cacheKey } from '@/lib/redis';
@@ -106,7 +106,8 @@ export async function PUT(request: NextRequest) {
       job.status = 'running';
       try {
         const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
-        const indexName = process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX;
+        const indexName =
+          process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX || DEFAULT_PINECONE_INDEX;
         const index = pinecone.index(indexName);
 
         const ghRag = createGhRag({
@@ -212,7 +213,8 @@ export async function POST(request: NextRequest) {
       apiKey: process.env.PINECONE_API_KEY!
     });
     
-    const indexName = process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX 
+    const indexName =
+      process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX || DEFAULT_PINECONE_INDEX;
     const index = pinecone.index(indexName);
 
     // Search GitHub repository using gh-rag with Pinecone
@@ -314,7 +316,8 @@ export async function GET(request: NextRequest) {
     }
 
     const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
-    const indexName = process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX;
+    const indexName =
+      process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX || DEFAULT_PINECONE_INDEX;
     const index = pinecone.index(indexName);
 
     const ghRag = createGhRag({
