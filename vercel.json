@@ -5,19 +5,5 @@
       "path": "/api/cron/ingest",
       "schedule": "0 4 * * *"
     }
-  ],
-  "functions": {
-    "src/app/api/skills/**/*.ts": {
-      "memory": 1536,
-      "maxDuration": 60
-    },
-    "src/app/api/rag/**/*.ts": {
-      "memory": 1024,
-      "maxDuration": 30
-    },
-    "src/app/api/**/*.ts": {
-      "memory": 512,
-      "maxDuration": 10
-    }
-  }
+  ]
 }
