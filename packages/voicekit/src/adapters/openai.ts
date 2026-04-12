@@ -30,12 +30,27 @@ import type {
   ServerAdapter,
 } from '../core/types';
 import type { ToolDefinition } from '../types';
+import type { ToolMiddleware } from '../core/types';
 
 // ============================================================================
 // Tool conversion: VoiceKit ToolDefinition -> OpenAI SDK tool
 // ============================================================================
 
-function convertTool(def: ToolDefinition) {
+function applyMiddleware(
+  toolName: string,
+  execute: (input: unknown) => Promise<unknown> | unknown,
+  middleware: ToolMiddleware[] | undefined,
+): (input: unknown) => Promise<unknown> {
+  if (!middleware?.length) return (input) => Promise.resolve(execute(input));
+  return (input) =>
+    middleware.reduceRight<(params: unknown) => Promise<unknown>>(
+      (next, mw) => (params) => mw(toolName, params, next),
+      (params) => Promise.resolve(execute(params)),
+    )(input);
+}
+
+function convertTool(def: ToolDefinition, middleware?: ToolMiddleware[]) {
+  const wrappedExecute = applyMiddleware(def.name, def.execute as (input: unknown) => unknown, middleware);
   return sdkTool({
     name: def.name,
     description: def.description,
@@ -47,7 +62,7 @@ function convertTool(def: ToolDefinition) {
     },
     execute: async (input: unknown) => {
       try {
-        const result = await def.execute(input as Record<string, unknown>);
+        const result = await wrappedExecute(input);
         emitToolResult(def.name, input, result);
         return result;
       } catch (error) {
@@ -70,12 +85,14 @@ class OpenAISession
   private session: RealtimeSession | null = null;
   private agent: RealtimeAgent;
   private options: SessionOptions;
+  private agentConfig: VoiceAgentConfig;
   private responseInFlight = false;
 
-  constructor(agent: RealtimeAgent, options: SessionOptions) {
+  constructor(agent: RealtimeAgent, options: SessionOptions, agentConfig: VoiceAgentConfig) {
     super();
     this.agent = agent;
     this.options = options;
+    this.agentConfig = agentConfig;
   }
 
   async connect(config: ConnectConfig): Promise<void> {
@@ -113,7 +130,14 @@ class OpenAISession
 
     this.wireEvents(this.session);
     await this.session.connect({ apiKey: config.authToken });
+    this.agentConfig.onConnect?.();
     this.emit('status_change', 'CONNECTED');
+
+    if (this.agentConfig.greeting !== false) {
+      setTimeout(() => {
+        this.session?.transport.sendEvent({ type: 'response.create' });
+      }, 500);
+    }
   }
 
   async disconnect(): Promise<void> {
@@ -125,6 +149,7 @@ class OpenAISession
       }
       this.session = null;
     }
+    this.agentConfig.onDisconnect?.();
     this.removeAllListeners();
     this.emit('status_change', 'DISCONNECTED');
   }
@@ -315,17 +340,19 @@ export function openai(options: OpenAIAdapterOptions = {}): VoiceAdapter {
     createSession(agentConfig: VoiceAgentConfig, sessionOpts?: SessionOptions): VoiceSession {
       const merged: SessionOptions = { ...options, ...sessionOpts };
       const agent = buildRealtimeAgent(agentConfig);
-      return new OpenAISession(agent, merged);
+      return new OpenAISession(agent, merged, agentConfig);
     },
   };
 }
 
 function buildRealtimeAgent(config: VoiceAgentConfig): RealtimeAgent {
-  const tools = (config.tools || []).map(convertTool);
+  const tools = (config.tools || []).map((t) => convertTool(t, config.toolMiddleware));
+  const handoffs = (config.handoffs || []).map(buildRealtimeAgent);
   return new RealtimeAgent({
     name: config.name,
     instructions: config.instructions,
     tools,
+    ...(handoffs.length > 0 && { handoffs }),
   });
 }
 

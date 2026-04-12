@@ -86,6 +86,7 @@ export {
   createAPITool,
   createSearchTool,
   createRAGTool,
+  emitToolResult,
   TOOL_RESULT_EVENT,
 } from './tools';
 

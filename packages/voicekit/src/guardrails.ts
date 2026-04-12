@@ -1,4 +1,9 @@
-import { z } from 'zod';
+let z: typeof import('zod').z | undefined;
+try {
+  z = require('zod').z;
+} catch {
+  // zod is an optional peer dependency; guardrail Zod schemas are unavailable without it
+}
 
 // Moderation categories
 export const MODERATION_CATEGORIES = [
@@ -9,16 +14,20 @@ export const MODERATION_CATEGORIES = [
 ] as const;
 
 export type ModerationCategory = (typeof MODERATION_CATEGORIES)[number];
-export const ModerationCategoryZod = z.enum([...MODERATION_CATEGORIES]);
+export const ModerationCategoryZod = z?.enum([...MODERATION_CATEGORIES]);
 
 // Guardrail output schema
-export const GuardrailOutputZod = z.object({
+export const GuardrailOutputZod = z?.object({
   moderationRationale: z.string(),
-  moderationCategory: ModerationCategoryZod,
+  moderationCategory: z.enum([...MODERATION_CATEGORIES]),
   testText: z.string().optional(),
 }).strict();
 
-export type GuardrailOutput = z.infer<typeof GuardrailOutputZod>;
+export type GuardrailOutput = {
+  moderationRationale: string;
+  moderationCategory: ModerationCategory;
+  testText?: string;
+};
 
 export interface GuardrailResult {
   status: 'IN_PROGRESS' | 'DONE';
@@ -119,7 +128,7 @@ export async function runGuardrailClassifier(
 
   try {
     const data = await response.json();
-    return GuardrailOutputZod.parse(data);
+    return GuardrailOutputZod ? GuardrailOutputZod.parse(data) : data as GuardrailOutput;
   } catch {
     return null;
   }

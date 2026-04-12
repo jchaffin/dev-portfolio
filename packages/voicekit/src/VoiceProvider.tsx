@@ -24,28 +24,17 @@ import type {
 const VoiceContext = createContext<VoiceContextValue | null>(null);
 
 /**
- * Provider component that enables voice functionality.
- * Pass a provider adapter (e.g. `openai()`, `livekit()`) to connect to
- * different voice backends without changing any other code.
+ * Simple voice provider — self-contained transcript via `useVoice()`.
  *
- * @example
- * ```tsx
- * import { VoiceProvider, createAgent } from '@jchaffin/voicekit';
- * import { openai } from '@jchaffin/voicekit/openai';
+ * For production apps that need rich transcript items, event logging,
+ * or suggestion chips, use the **advanced** path instead:
+ *   `<EventProvider>` + `<TranscriptProvider>` + `<SuggestionProvider>`
+ *   with `useRealtimeSession` / `useSessionHistory`.
  *
- * const agent = createAgent({
- *   name: 'Assistant',
- *   instructions: 'You are helpful.'
- * });
+ * Do **not** mix both — pick one integration path per app.
  *
- * function App() {
- *   return (
- *     <VoiceProvider adapter={openai()} agent={agent}>
- *       <MyChat />
- *     </VoiceProvider>
- *   );
- * }
- * ```
+ * Initial greeting is handled by the adapter (e.g. `openai()` sends
+ * `response.create` when `agent.greeting !== false`).
  */
 export function VoiceProvider({
   children,
@@ -209,11 +198,6 @@ export function VoiceProvider({
       });
 
       updateStatus(VoiceStatusEnum.CONNECTED);
-
-      // Trigger initial greeting
-      setTimeout(() => {
-        session.sendRawEvent?.({ type: 'response.create' });
-      }, 500);
     } catch (error) {
       console.error('VoiceKit connection failed:', error);
       try {
