@@ -64,18 +64,17 @@ export async function GET(request: NextRequest) {
     const pinecone = new Pinecone({ apiKey: pineconeKey });
     const index = pinecone.index(indexName);
 
-    const ghRag = createGhRag({
-      openaiApiKey: openaiKey,
-      githubToken: token,
-      pine: { index },
-    });
-
     let success = 0;
     let failed = 0;
     const errors: string[] = [];
 
     for (const repo of repos) {
       try {
+        const ghRag = createGhRag({
+          openaiApiKey: openaiKey,
+          githubToken: token,
+          pine: { index, namespace: repo.full_name },
+        });
         const gitUrl = `https://github.com/${repo.full_name}.git`;
         await ghRag.ingest({ gitUrl });
         success++;

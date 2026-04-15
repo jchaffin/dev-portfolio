@@ -8,7 +8,31 @@ import { meAgent } from '@/agents/MeAgent';
 import resumeData from '@/data/resume.json';
 import type { ContactFormData, CalendlyData } from '@/components/voice/types';
 
-const adapter = openai();
+function buildTranscriptionPrompt(): string {
+  const terms: Set<string> = new Set();
+  if (resumeData.name) terms.add(resumeData.name);
+  for (const exp of resumeData.experience || []) {
+    if (exp.company) terms.add(exp.company);
+    for (const alias of (exp as any).aliases || []) terms.add(alias);
+    for (const kw of exp.keywords || []) terms.add(kw);
+  }
+  for (const skill of resumeData.skills || []) terms.add(skill);
+  for (const proj of (resumeData as any).projects || []) {
+    if (proj.name) terms.add(proj.name);
+    for (const kw of proj.keywords || []) terms.add(kw);
+  }
+  return Array.from(terms).join(', ');
+}
+
+const adapter = openai({
+  transcriptionPrompt: buildTranscriptionPrompt(),
+  turnDetection: {
+    type: 'server_vad',
+    threshold: 0.6,
+    prefix_padding_ms: 300,
+    silence_duration_ms: 500,
+  },
+});
 
 interface UseVoiceAgentOptions {
   portfolioContext: PortfolioContext;
@@ -227,7 +251,7 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
         setContactFormOpen(true);
       } else if (name === 'set_meeting' && output.success && output.action === 'open_calendly') {
         silenceAgent();
-        setCalendlyData({ url: output.calendly_url, details: output.meeting_details });
+        setCalendlyData({ url: output.calendly_url });
         setCalendlyModalOpen(true);
       }
     };

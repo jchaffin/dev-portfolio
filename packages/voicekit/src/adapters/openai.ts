@@ -98,6 +98,26 @@ class OpenAISession
   async connect(config: ConnectConfig): Promise<void> {
     const audioElement = config.audioElement;
 
+    const transcription: Record<string, unknown> = {
+      model: (this.options.transcriptionModel as string) || 'gpt-4o-transcribe',
+      language: (this.options.language as string) || 'en',
+    };
+    if (this.options.transcriptionPrompt) {
+      transcription.prompt = this.options.transcriptionPrompt;
+    }
+
+    const sessionConfig: Record<string, unknown> = {
+      inputAudioFormat: this.options.codec === 'g711' ? 'g711_ulaw' : 'pcm16',
+      outputAudioFormat: this.options.codec === 'g711' ? 'g711_ulaw' : 'pcm16',
+      inputAudioTranscription: transcription,
+    };
+    if (this.options.turnDetection) {
+      sessionConfig.turnDetection = {
+        type: 'server_vad',
+        ...this.options.turnDetection,
+      };
+    }
+
     this.session = new RealtimeSession(this.agent, {
       transport: new OpenAIRealtimeWebRTC({
         audioElement,
@@ -116,14 +136,7 @@ class OpenAISession
         }),
       }),
       model: (this.options.model as string) || 'gpt-realtime',
-      config: {
-        inputAudioFormat: this.options.codec === 'g711' ? 'g711_ulaw' : 'pcm16',
-        outputAudioFormat: this.options.codec === 'g711' ? 'g711_ulaw' : 'pcm16',
-        inputAudioTranscription: {
-          model: (this.options.transcriptionModel as string) || 'gpt-4o-transcribe',
-          language: (this.options.language as string) || 'en',
-        },
-      },
+      config: sessionConfig,
       outputGuardrails: (config.outputGuardrails ?? []) as any,
       context: config.context ?? {},
     });
@@ -338,6 +351,16 @@ export interface OpenAIAdapterOptions extends SessionOptions {
   codec?: string;
   voice?: string;
   transcriptionModel?: string;
+  /** Vocabulary hint for input transcription (domain terms, names, etc.). */
+  transcriptionPrompt?: string;
+  /** Server VAD turn detection config. */
+  turnDetection?: {
+    type?: 'server_vad';
+    threshold?: number;
+    prefix_padding_ms?: number;
+    silence_duration_ms?: number;
+    create_response?: boolean;
+  };
 }
 
 /**

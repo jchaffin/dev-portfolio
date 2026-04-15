@@ -331,7 +331,6 @@ const VoiceAIContent = () => {
         isOpen={calendlyModalOpen}
         onClose={() => setCalendlyModalOpen(false)}
         calendlyUrl={calendlyData.url}
-        meetingDetails={calendlyData.details}
       />
     </section>
   );

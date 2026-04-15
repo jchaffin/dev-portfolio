@@ -74,8 +74,4 @@ export interface ContactFormData {
 
 export interface CalendlyData {
   url: string;
-  details?: {
-    type: string;
-    duration: string;
-  };
 }

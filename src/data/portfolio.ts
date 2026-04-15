@@ -76,16 +76,18 @@ const extractSkillsFromResume = (): Skill[] => {
 
 // Extract experiences from resume data
 const extractExperiencesFromResume = () => {
-  return resumeData.experience?.map((exp, index) => ({
-    id: index + 1,
-    company: exp.company,
-    position: exp.role,
-    duration: exp.duration,
-    location: exp.location,
-    type: 'full-time' as const,
-    description: exp.description.split('. ').filter(sentence => sentence.trim().length > 0),
-    technologies: exp.keywords || []
-  })) || [];
+  return resumeData.experience
+    ?.filter(exp => (exp as { engagement?: string }).engagement !== 'owned_product')
+    .map((exp, index) => ({
+      id: index + 1,
+      company: exp.company,
+      position: exp.role,
+      duration: exp.duration,
+      location: exp.location,
+      type: 'full-time' as const,
+      description: exp.description.split('. ').filter(sentence => sentence.trim().length > 0),
+      technologies: exp.keywords || []
+    })) || [];
 };
 
 export const experiences = extractExperiencesFromResume();

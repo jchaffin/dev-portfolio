@@ -164,6 +164,23 @@ async function loadProjectsForSkillCorpus(): Promise<ProjectSkillCorpus[]> {
   return [...featured, ...dedupedGithub];
 }
 
+/** GitHub owner extracted from resume contact link, used to resolve bare repo names to owner/repo Pinecone namespaces. */
+const ghOwner = ((resumeData as any).contact?.github || '').replace(/.*github\.com\//i, '').replace(/\/$/, '') || 'jchaffin';
+
+/** All known GitHub owners/orgs from resume project URLs and additionalSourceUrls. */
+const knownGhOwners: string[] = (() => {
+  const owners = new Set<string>([ghOwner]);
+  const projects = (resumeData as any).projects || [];
+  for (const p of projects) {
+    for (const url of [p.github, ...(p.additionalSourceUrls || [])]) {
+      if (typeof url !== 'string') continue;
+      const m = url.match(/github\.com\/([^/?#]+)/i);
+      if (m?.[1]) owners.add(m[1]);
+    }
+  }
+  return Array.from(owners);
+})();
+
 // Legacy emitUI for non-suggestion tool events (contact form, calendly, etc.)
 function emitUI(name: string, data: Record<string, unknown>) {
   if (typeof window !== 'undefined') {
@@ -201,14 +218,11 @@ export const openContactForm = defineTool({
 export const openCalendly = defineTool({
   name: 'open_calendly',
   description:
-    'Opens the scheduling UI. After it succeeds, say one short spoken confirmation only — no follow-up questions in that turn.',
-  parameters: {
-    type: { type: 'string', enum: ['intro', 'technical', 'consulting'], description: 'Meeting type' }
-  },
-  execute: ({ type }) => {
-    const calendlyUrl = 'https://calendly.com/jchaffin57/30min';
-    const result = { action: 'open_calendly', calendly_url: calendlyUrl, meeting_details: { type: type || 'intro' } };
-    emitUI('set_meeting', result);
+    'Opens the scheduling UI for a 30-minute meeting. After it succeeds, say one short spoken confirmation only — no follow-up questions in that turn.',
+  parameters: {},
+  execute: () => {
+    const calendlyUrl = 'https://calendly.com/jacob-chaffin/30min';
+    emitUI('set_meeting', { action: 'open_calendly', calendly_url: calendlyUrl });
     return { success: true, message: 'Scheduler is now open. Say only a brief confirmation. Do not ask follow-up questions.' };
   }
 });
@@ -242,14 +256,18 @@ export const getProjects = defineTool({
     'Lists featured portfolio entries from the bundled resume plus public GitHub repositories from the site API. High-level names, links, and blurbs only — not semantic code search. For implementation evidence use search_project or find_projects_by_tech; for job responsibilities use search_experience.',
   parameters: {},
   execute: async () => {
-    const featured = ((resumeData as any).projects || []).map((p: any) => ({
-      name: p.name,
-      description: p.description || '',
-      tech: p.keywords || [],
-      github: p.github || '',
-      live: p.website || '',
-      featured: true,
-    }));
+    const featured = ((resumeData as any).projects || []).map((p: any) => {
+      const ghMatch = (p.github || '').match(/github\.com\/([^/?#]+\/[^/?#]+)/i);
+      return {
+        name: p.name,
+        repo: ghMatch?.[1] || `${ghOwner}/${p.name}`,
+        description: p.description || '',
+        tech: p.keywords || [],
+        github: p.github || '',
+        live: p.website || '',
+        featured: true,
+      };
+    });
 
     let github: any[] = [];
     try {
@@ -258,6 +276,7 @@ export const getProjects = defineTool({
         const repos = await res.json();
         github = repos.map((r: any) => ({
           name: r.name,
+          repo: r.full_name || `${ghOwner}/${r.name}`,
           description: r.description || '',
           tech: r.topics || [],
           github: r.html_url,
@@ -286,31 +305,112 @@ export const getProjects = defineTool({
   }
 });
 
+/** Resolve a bare repo name to owner/repo by checking resume projects, the GitHub API, and known orgs. */
+async function resolveRepo(repo: string | undefined): Promise<string | undefined> {
+  if (!repo) return undefined;
+  if (repo.includes('/')) return repo;
+
+  const bare = repo.toLowerCase();
+
+  // 1. Check featured projects' GitHub URLs for an exact repo-name match
+  const projects = ((resumeData as any).projects || []) as any[];
+  for (const p of projects) {
+    for (const url of [p.github, ...(p.additionalSourceUrls || [])]) {
+      if (typeof url !== 'string') continue;
+      const m = url.match(/github\.com\/([^/?#]+\/[^/?#]+)/i);
+      if (m?.[1] && m[1].split('/')[1]?.toLowerCase() === bare) return m[1];
+    }
+  }
+
+  // 2. Check user's GitHub repos from the API
+  try {
+    const res = await fetch('/api/projects');
+    if (res.ok) {
+      const repos = await res.json();
+      const match = (repos as any[]).find(
+        (r) => r.name?.toLowerCase() === bare
+          || r.full_name?.toLowerCase() === bare
+      );
+      if (match?.full_name) return match.full_name;
+    }
+  } catch {}
+
+  // 3. Try each known org/owner — return all candidates for the caller to try
+  return `${ghOwner}/${repo}`;
+}
+
+/** For repos that might live under an org, returns all plausible owner/repo candidates. */
+function repoCandidates(repo: string): string[] {
+  if (repo.includes('/')) return [repo];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const owner of knownGhOwners) {
+    const candidate = `${owner}/${repo}`;
+    if (!seen.has(candidate.toLowerCase())) {
+      seen.add(candidate.toLowerCase());
+      out.push(candidate);
+    }
+  }
+  return out;
+}
+
 export const searchProject = defineTool({
   name: 'search_project',
   description:
-    'RAG: semantic search over ingested GitHub source (snippets with paths). Use for implementation detail, file locations, or reading how something works in code. Not for employment history or resume bullets — use search_experience for that. Optional repo narrows to one repository. In replies, only summarize text that appears in returned snippets — do not invent product stories or "evaluation pipelines" not present in those snippets.',
+    'RAG: semantic search over ingested GitHub source (snippets with paths). Use for implementation detail, file locations, or reading how something works in code. Not for employment history or resume bullets — use search_experience for that. Optional repo narrows to one repository — pass the repo name or owner/repo. In replies, only summarize text that appears in returned snippets — do not invent product stories or "evaluation pipelines" not present in those snippets.',
   parameters: {
     query: { type: 'string', description: 'Technical/code search query' },
     repo: {
       type: 'string',
       description:
-        'Optional: one repo to search. Use owner/repo (e.g. jchaffin/dev-portfolio, ProsodyAI/api) — matches the Pinecone namespace set at ingest.',
+        'Optional: repo name (e.g. "layline.ai") or owner/repo (e.g. "jchaffin/layline.ai") to scope the search.',
     },
   },
   required: ['query'],
   execute: async ({ query, repo }: { query: string; repo?: string }) => {
-    try {
+    async function ragSearch(namespace: string | undefined) {
       const res = await fetch('/api/rag', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, repo, limit: 5 })
+        body: JSON.stringify({ query, repo: namespace, limit: 5 })
       });
-
-      if (!res.ok) return { success: false, error: `Search failed (${res.status})` };
-
+      if (!res.ok) return null;
       const data = await res.json();
-      const snippets = (data.snippets || []).map((s: any) => ({
+      return (data.snippets || []) as any[];
+    }
+
+    try {
+      let snippets: any[] = [];
+      let searchedRepo: string | undefined;
+
+      if (repo) {
+        // Pinecone namespaces may be bare ("layline.ai") or owner/repo ("jchaffin/layline.ai").
+        // Try the bare name first (most common ingest format), then resolved owner/repo, then other orgs.
+        const bare = repo.includes('/') ? undefined : repo;
+        const resolved = await resolveRepo(repo);
+
+        const candidates: string[] = [];
+        if (bare) candidates.push(bare);
+        if (resolved && resolved !== bare) candidates.push(resolved);
+        if (!repo.includes('/')) {
+          for (const c of repoCandidates(repo)) {
+            if (!candidates.includes(c)) candidates.push(c);
+          }
+        }
+
+        for (const candidate of candidates) {
+          const attempt = await ragSearch(candidate);
+          if (attempt && attempt.length > 0) {
+            snippets = attempt;
+            searchedRepo = candidate;
+            break;
+          }
+        }
+      } else {
+        snippets = (await ragSearch(undefined)) || [];
+      }
+
+      const mapped = snippets.map((s: any) => ({
         repo: s.repo,
         file: s.path,
         lines: s.start && s.end ? `${s.start}-${s.end}` : undefined,
@@ -318,16 +418,15 @@ export const searchProject = defineTool({
         technologies: Array.isArray(s.techStack) ? s.techStack : undefined
       }));
 
-      // Also collect unique repos found for context
-      const reposFound = Array.from(new Set(snippets.map((s: any) => s.repo).filter(Boolean)));
+      const reposFound = Array.from(new Set(mapped.map((s: any) => s.repo).filter(Boolean)));
 
       return {
         success: true,
         query,
-        reposSearched: repo || 'all',
+        reposSearched: searchedRepo || 'all',
         reposFound,
-        resultCount: snippets.length,
-        snippets
+        resultCount: mapped.length,
+        snippets: mapped
       };
     } catch {
       return { success: false, error: 'Search failed' };
