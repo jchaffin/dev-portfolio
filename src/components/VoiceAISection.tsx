@@ -56,13 +56,18 @@ const VoiceAIContent = () => {
   // Categorized skills state
   const [skills, setSkills] = useState<Skill[]>(portfolioSkills);
 
-  // Fetch dynamic projects and categorized skills
   useEffect(() => {
+    let cancelled = false;
     const loadData = async () => {
-      const githubProjects = await getProjects();
+      let githubProjects: Project[] = [];
+      try {
+        githubProjects = await getProjects();
+      } catch {
+        // Keep projects empty on error
+      }
+      if (cancelled) return;
       setProjects(githubProjects);
-      
-      // Get semantic categories for skills
+
       try {
         const initialSkills = getDynamicSkills(portfolioSkills, githubProjects);
         const response = await fetch('/api/skills/categorize', {
@@ -70,7 +75,7 @@ const VoiceAIContent = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ skills: initialSkills }),
         });
-        if (response.ok) {
+        if (!cancelled && response.ok) {
           const { categorizedSkills } = await response.json();
           setSkills(categorizedSkills);
         }
@@ -79,6 +84,7 @@ const VoiceAIContent = () => {
       }
     };
     loadData();
+    return () => { cancelled = true; };
   }, []);
 
   // Portfolio data for context (uses categorized skills from state)
@@ -303,6 +309,7 @@ const VoiceAIContent = () => {
                 <InlineContactForm
                   onClose={() => setContactFormOpen(false)}
                   initialSubject={contactFormData.subject}
+                  initialContext={contactFormData.context}
                 />
               ) : (
                 <ChatInput

@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { audioFormatForCodec, applyCodecPreferences } from '../utils/audio';
 import { useEvent } from '../contexts/EventContext';
 import { useSessionHistory } from './useSessionHistory';
 import { VoiceStatusEnum } from '../core/types';
@@ -55,6 +54,13 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   }, []);
 
   const wireNormalizedEvents = useCallback((session: VoiceSession) => {
+    session.on('status_change', (status: unknown) => {
+      if (status === 'DISCONNECTED' && sessionRef.current === session) {
+        sessionRef.current = null;
+        updateStatus(VoiceStatusEnum.DISCONNECTED);
+      }
+    });
+
     // Barge-in: user started speaking, mark current assistant item as interrupted
     session.on('user_speech_started', () => {});
 

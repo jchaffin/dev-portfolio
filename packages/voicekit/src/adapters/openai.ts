@@ -129,29 +129,24 @@ class OpenAISession
     });
 
     this.wireEvents(this.session);
+    this.wireTransportDisconnect(this.session);
     await this.session.connect({ apiKey: config.authToken });
     this.agentConfig.onConnect?.();
     this.emit('status_change', 'CONNECTED');
-
-    if (this.agentConfig.greeting !== false) {
-      setTimeout(() => {
-        this.session?.transport.sendEvent({ type: 'response.create' });
-      }, 500);
-    }
   }
 
   async disconnect(): Promise<void> {
     if (this.session) {
       try {
-        await this.session.close();
+        this.session.close();
       } catch {
         // Ignore close errors
       }
       this.session = null;
     }
     this.agentConfig.onDisconnect?.();
-    this.removeAllListeners();
     this.emit('status_change', 'DISCONNECTED');
+    this.removeAllListeners();
   }
 
   async sendMessage(text: string): Promise<void> {
@@ -188,6 +183,26 @@ class OpenAISession
 
   sendRawEvent(event: Record<string, unknown>): void {
     this.session?.transport.sendEvent(event as any);
+  }
+
+  /**
+   * The SDK's RealtimeSession doesn't propagate transport-level connection
+   * state changes. Listen directly on the transport so we detect drops
+   * (ICE failure, server-side close, network loss) and surface them.
+   */
+  private wireTransportDisconnect(session: RealtimeSession): void {
+    const transport = session.transport as any;
+    if (typeof transport?.on !== 'function') return;
+
+    transport.on('connection_change', (status: string) => {
+      if (status === 'disconnected' && this.session === session) {
+        this.session = null;
+        this.agentConfig.onDisconnect?.();
+        this.emit('error', new Error('Transport disconnected'));
+        this.emit('status_change', 'DISCONNECTED');
+        this.removeAllListeners();
+      }
+    });
   }
 
   // Map OpenAI SDK events -> normalized SessionEvents

@@ -29,22 +29,14 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
   const [calendlyModalOpen, setCalendlyModalOpen] = useState(false);
   const [contactFormData, setContactFormData] = useState<ContactFormData>({});
   const [calendlyData, setCalendlyData] = useState<CalendlyData>({ url: '' });
-  const [projectPreview, setProjectPreview] = useState<{
-    name: string;
-    description?: string;
-    liveUrl?: string;
-    githubUrl?: string;
-    tech?: string[];
-  } | null>(null);
 
   const { suggestions: agentSuggestions, clearSuggestions } = useSuggestions();
 
-  // Refs for values that callbacks need fresh access to
   const statusRef = useRef<SessionStatus>('DISCONNECTED');
   const greetingSentRef = useRef(false);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
-  const micStreamRef = useRef<MediaStream | null>(null);
   const pendingSuggestionRef = useRef<string | null>(null);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { statusRef.current = sessionStatus; }, [sessionStatus]);
 
@@ -58,7 +50,6 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     onConnectionChange: (s) => setSessionStatus(s as SessionStatus),
   });
 
-  // Audio element setup
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const el = document.createElement('audio');
@@ -70,17 +61,22 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     return () => { try { el.pause(); el.srcObject = null; el.remove(); } catch {} };
   }, []);
 
-  // Fetch ephemeral key
   const fetchEphemeralKey = async (): Promise<string | null> => {
     try {
       const res = await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        console.error('Session API error:', res.status, body);
+        return null;
+      }
       const data = await res.json();
       return data.ephemeralKey || null;
-    } catch { return null; }
+    } catch (err) {
+      console.error('Failed to fetch ephemeral key:', err);
+      return null;
+    }
   };
 
-  // Connect
   const connectToRealtime = useCallback(async () => {
     if (isConnectedRef() || isConnectingRef()) return;
     const audioEl = audioElementRef.current;
@@ -109,13 +105,7 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     }
   }, [clearTranscript, connect, portfolioContext]);
 
-  // Disconnect
   const disconnectFromRealtime = useCallback(async () => {
-    const mic = micStreamRef.current;
-    if (mic) {
-      mic.getTracks().forEach((t) => { t.stop(); t.enabled = false; });
-      micStreamRef.current = null;
-    }
     stopRecording();
 
     if (audioElementRef.current) {
@@ -129,28 +119,24 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     setSessionStatus('DISCONNECTED');
   }, [stopRecording, disconnect]);
 
-  // Toggle
   const toggleConnection = useCallback(async () => {
     if (isConnectedRef()) await disconnectFromRealtime();
     else if (isDisconnectedRef()) await connectToRealtime();
   }, [disconnectFromRealtime, connectToRealtime]);
 
-  // Send message
   const sendMessage = useCallback((text: string) => {
     if (!isConnectedRef()) return;
     try {
       sendUserText(text);
     } catch {
-      const id = Math.random().toString(36).substring(2, 15);
       sendEvent({
         type: 'conversation.item.create',
-        item: { id, type: 'message', role: 'user', content: [{ type: 'input_text', text }] },
+        item: { id: crypto.randomUUID(), type: 'message', role: 'user', content: [{ type: 'input_text', text }] },
       });
       sendEvent({ type: 'response.create' });
     }
   }, [sendUserText, sendEvent]);
 
-  // Suggestion click
   const handleSuggestionClick = useCallback(async (message: string) => {
     if (isConnectedRef()) {
       sendMessage(message);
@@ -161,17 +147,19 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     }
   }, [sendMessage, clearSuggestions, connectToRealtime]);
 
-  // Send pending suggestion when connected
+  // Send pending suggestion after greeting has had time to start
   useEffect(() => {
     if (isConnected && pendingSuggestionRef.current) {
       const msg = pendingSuggestionRef.current;
       pendingSuggestionRef.current = null;
-      const timeout = setTimeout(() => sendMessage(msg), 2500);
+      const timeout = setTimeout(() => {
+        interrupt();
+        sendMessage(msg);
+      }, 2000);
       return () => clearTimeout(timeout);
     }
-  }, [isConnected, sendMessage]);
+  }, [isConnected, sendMessage, interrupt]);
 
-  // Clear suggestions on disconnect
   useEffect(() => {
     if (isDisconnected) {
       clearSuggestions();
@@ -197,28 +185,29 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
         })),
       });
 
-      setTimeout(() => sendEvent({ type: 'response.create' }), 1200);
+      const greetingTimer = setTimeout(() => sendEvent({ type: 'response.create' }), 1200);
+      return () => clearTimeout(greetingTimer);
     }
   }, [isConnected, sendEvent]);
 
-  // Reset chat
   const resetChat = useCallback(async () => {
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     if (isConnectedRef() || isConnectingRef()) await disconnectFromRealtime();
     clearSuggestions();
-    setProjectPreview(null);
     setContactFormOpen(false);
     setContactFormData({});
     greetingSentRef.current = false;
-    setTimeout(() => connectToRealtime(), 500);
+    resetTimerRef.current = setTimeout(() => {
+      resetTimerRef.current = null;
+      connectToRealtime();
+    }, 500);
   }, [clearSuggestions, disconnectFromRealtime, connectToRealtime]);
 
-  // Immediately silence the agent when a UI action fires
   const silenceAgent = useCallback(() => {
     interrupt();
     mute(true);
   }, [interrupt, mute]);
 
-  // Resume mic when overlay closes
   const uiOverlayOpen = contactFormOpen || calendlyModalOpen;
   useEffect(() => {
     if (!isConnectedRef()) return;
@@ -227,7 +216,6 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     }
   }, [uiOverlayOpen, mute, isAudioPlaybackEnabled]);
 
-  // Agent UI actions (contact form, calendly, project preview)
   useEffect(() => {
     const handler = (event: any) => {
       if (event.detail?.type !== 'agent_tool_end') return;
@@ -241,21 +229,12 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
         silenceAgent();
         setCalendlyData({ url: output.calendly_url, details: output.meeting_details });
         setCalendlyModalOpen(true);
-      } else if (name === 'show_project_preview' && output.success) {
-        setProjectPreview({
-          name: output.project.name || '',
-          description: output.project.description || '',
-          liveUrl: output.project.liveUrl || '',
-          githubUrl: output.project.githubUrl || '',
-          tech: output.project.tech || [],
-        });
       }
     };
     window.addEventListener('agent-tool-response', handler);
     return () => window.removeEventListener('agent-tool-response', handler);
   }, [silenceAgent]);
 
-  // Audio playback
   useEffect(() => {
     localStorage.setItem('audioPlaybackEnabled', isAudioPlaybackEnabled.toString());
   }, [isAudioPlaybackEnabled]);
@@ -274,7 +253,6 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     try { mute(!isAudioPlaybackEnabled); } catch {}
   }, [isAudioPlaybackEnabled, mute]);
 
-  // Recording control
   useEffect(() => {
     if (isConnected && audioElementRef.current?.srcObject) {
       startRecording(audioElementRef.current.srcObject as MediaStream);
@@ -282,11 +260,10 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     if (isDisconnected) stopRecording();
   }, [isConnected, isDisconnected, startRecording, stopRecording]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       stopRecording();
-      micStreamRef.current?.getTracks().forEach((t) => t.stop());
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, []);
 
@@ -307,8 +284,6 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     calendlyData,
     setCalendlyData,
     agentSuggestions,
-    projectPreview,
-    setProjectPreview,
     handleSuggestionClick,
     isAudioPlaybackEnabled,
     setIsAudioPlaybackEnabled,

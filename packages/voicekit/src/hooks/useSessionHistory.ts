@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { useTranscript } from '../contexts/TranscriptContext';
 import { useEvent } from '../contexts/EventContext';
 
@@ -115,8 +115,12 @@ export function useSessionHistory() {
 
       const guardrailMessage = sketchilyDetectGuardrailMessage(text);
       if (guardrailMessage) {
-        const failureDetails = JSON.parse(guardrailMessage);
-        addTranscriptBreadcrumb('Output Guardrail Active', { details: failureDetails });
+        try {
+          const failureDetails = JSON.parse(guardrailMessage);
+          addTranscriptBreadcrumb('Output Guardrail Active', { details: failureDetails });
+        } catch {
+          addTranscriptBreadcrumb('Output Guardrail Active', { raw: guardrailMessage });
+        }
       } else {
         addTranscriptMessage(itemId, role, text);
       }

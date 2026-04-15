@@ -7,17 +7,19 @@ import type { FormSubmissionState } from './types';
 interface InlineContactFormProps {
   onClose: () => void;
   initialSubject?: string;
+  initialContext?: string;
 }
 
 export const InlineContactForm: React.FC<InlineContactFormProps> = ({
   onClose,
   initialSubject = '',
+  initialContext = '',
 }) => {
   const [formState, setFormState] = useState<FormSubmissionState>({
     name: '',
     email: '',
     subject: initialSubject,
-    message: '',
+    message: initialContext,
     isSubmitting: false,
     submitStatus: 'idle',
   });

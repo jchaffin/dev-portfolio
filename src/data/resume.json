@@ -65,7 +65,7 @@
       ]
     },
     {
-      "name": "Realtime Metrics Dashboard",
+      "name": "Bottalk",
       "description": "Real-time voice AI analytics dashboard. KPI scoring with Pinecone, latency monitoring, and Pipecat Cloud call orchestration.",
       "website": "https://frontend-three-flax-30.vercel.app/",
       "github": "https://github.com/jchaffin/bottalk",
@@ -192,7 +192,7 @@
       ],
       "isCurrentRole": false,
       "engagement": "employment",
-      "knowledgeCompany": "wave-computing"
+      "knowledgeCompany": "wave"
     }
   ],
   "education": [

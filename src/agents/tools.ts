@@ -205,9 +205,9 @@ export const openCalendly = defineTool({
   parameters: {
     type: { type: 'string', enum: ['intro', 'technical', 'consulting'], description: 'Meeting type' }
   },
-  execute: () => {
+  execute: ({ type }) => {
     const calendlyUrl = 'https://calendly.com/jchaffin57/30min';
-    const result = { action: 'open_calendly', calendly_url: calendlyUrl };
+    const result = { action: 'open_calendly', calendly_url: calendlyUrl, meeting_details: { type: type || 'intro' } };
     emitUI('set_meeting', result);
     return { success: true, message: 'Scheduler is now open. Say only a brief confirmation. Do not ask follow-up questions.' };
   }
@@ -470,8 +470,8 @@ export const findProjectsByTech = defineTool({
         });
 
       emitSuggestions({
-        type: 'project',
-        prompt: `Projects using ${technology}:`,
+        type: 'skill',
+        prompt: `${technology} in action:`,
         items: projects.map(p => ({
           id: p.name.toLowerCase().replace(/\s+/g, '-'),
           label: p.name,
@@ -701,7 +701,7 @@ export const showSuggestions = defineTool({
   description:
     'Pushes a custom suggestion chip row into the UI. Prefer the built-in tools that already emit suggestions (get_projects, get_experience, get_skills, find_projects_by_tech, search_experience) before using this generic escape hatch.',
   parameters: {
-    type: { type: 'string', enum: ['projects', 'skills', 'experiences', 'actions', 'sections'], description: 'Type of suggestions' },
+    type: { type: 'string', enum: ['project', 'skill', 'experience', 'action', 'section'], description: 'Type of suggestions' },
     items: { 
       type: 'array', 
       description: 'Array of items to display',

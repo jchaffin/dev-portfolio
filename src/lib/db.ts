@@ -4,15 +4,20 @@ import { getDatabaseUrl } from '@/lib/envConfig';
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
-const connectionString = getDatabaseUrl();
-
-const adapter = new PrismaPg({ connectionString });
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+function createPrismaClient(): PrismaClient {
+  const connectionString = getDatabaseUrl();
+  const adapter = new PrismaPg({ connectionString });
+  return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
+}
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    if (!globalForPrisma.prisma) {
+      globalForPrisma.prisma = createPrismaClient();
+    }
+    return (globalForPrisma.prisma as any)[prop];
+  },
+});

@@ -3,6 +3,8 @@ import Perplexity from '@perplexity-ai/perplexity_ai';
 import { prisma } from '@/lib/db';
 import { cacheGet, cacheSet, cacheKey, cacheDel } from '@/lib/redis';
 
+export const dynamic = 'force-dynamic';
+
 const DEEP_DIVE_CACHE_TTL = 86400; // 24 hours
 
 /** Key by project images path segment, e.g. "prosodyai" from "/projects/prosodyai" */
