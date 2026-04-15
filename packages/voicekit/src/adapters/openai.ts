@@ -149,13 +149,10 @@ class OpenAISession
   }
 
   async disconnect(): Promise<void> {
-    if (this.session) {
-      try {
-        this.session.close();
-      } catch {
-        // Ignore close errors
-      }
-      this.session = null;
+    const s = this.session;
+    this.session = null;
+    if (s) {
+      try { s.close(); } catch {}
     }
     this.agentConfig.onDisconnect?.();
     this.emit('status_change', 'DISCONNECTED');
