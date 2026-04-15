@@ -354,63 +354,99 @@ function repoCandidates(repo: string): string[] {
   return out;
 }
 
+async function ragSearchParallel(query: string, repo: string): Promise<{ snippets: any[]; namespace: string | undefined }> {
+  async function ragSearch(namespace: string | undefined) {
+    const res = await fetch('/api/rag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, repo: namespace, limit: 5 })
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.snippets || []) as any[];
+  }
+
+  const bare = repo.includes('/') ? undefined : repo;
+  const resolved = await resolveRepo(repo);
+
+  const candidates: string[] = [];
+  if (bare) candidates.push(bare);
+  if (resolved && resolved !== bare) candidates.push(resolved);
+  if (!repo.includes('/')) {
+    for (const c of repoCandidates(repo)) {
+      if (!candidates.includes(c)) candidates.push(c);
+    }
+  }
+
+  if (candidates.length === 0) return { snippets: [], namespace: undefined };
+
+  const results = await Promise.all(
+    candidates.map(async (c) => ({ ns: c, hits: await ragSearch(c) }))
+  );
+  const best = results.find(r => r.hits.length > 0);
+  return best ? { snippets: best.hits, namespace: best.ns } : { snippets: [], namespace: candidates[0] };
+}
+
 export const searchProject = defineTool({
   name: 'search_project',
   description:
-    'RAG: semantic search over ingested GitHub source (snippets with paths). Use for implementation detail, file locations, or reading how something works in code. Not for employment history or resume bullets — use search_experience for that. Optional repo narrows to one repository — pass the repo name or owner/repo. In replies, only summarize text that appears in returned snippets — do not invent product stories or "evaluation pipelines" not present in those snippets.',
+    'Primary tool when the user asks about ANY project. Returns project metadata (name, description, tech, links) AND code snippets from RAG in one call. Always pass the project name as the query. For employment history use search_experience.',
   parameters: {
-    query: { type: 'string', description: 'Technical/code search query' },
+    query: { type: 'string', description: 'Project name or technical query' },
     repo: {
       type: 'string',
       description:
-        'Optional: repo name (e.g. "layline.ai") or owner/repo (e.g. "jchaffin/layline.ai") to scope the search.',
+        'Repo name (e.g. "layline.ai") or owner/repo. If omitted, query is used as repo name too.',
     },
   },
   required: ['query'],
   execute: async ({ query, repo }: { query: string; repo?: string }) => {
-    async function ragSearch(namespace: string | undefined) {
-      const res = await fetch('/api/rag', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, repo: namespace, limit: 5 })
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return (data.snippets || []) as any[];
-    }
+    const repoName = repo || query.replace(/\s+project$/i, '').trim();
 
     try {
-      let snippets: any[] = [];
-      let searchedRepo: string | undefined;
-
-      if (repo) {
-        // Pinecone namespaces may be bare ("layline.ai") or owner/repo ("jchaffin/layline.ai").
-        // Try the bare name first (most common ingest format), then resolved owner/repo, then other orgs.
-        const bare = repo.includes('/') ? undefined : repo;
-        const resolved = await resolveRepo(repo);
-
-        const candidates: string[] = [];
-        if (bare) candidates.push(bare);
-        if (resolved && resolved !== bare) candidates.push(resolved);
-        if (!repo.includes('/')) {
-          for (const c of repoCandidates(repo)) {
-            if (!candidates.includes(c)) candidates.push(c);
+      // Fetch metadata and RAG snippets in parallel
+      const [metaResult, ragResult] = await Promise.all([
+        (async () => {
+          const featured = ((resumeData as any).projects || []) as any[];
+          const match = featured.find((p: any) => p.name.toLowerCase() === repoName.toLowerCase());
+          if (match) {
+            const ghMatch = (match.github || '').match(/github\.com\/([^/?#]+\/[^/?#]+)/i);
+            return {
+              name: match.name,
+              repo: ghMatch?.[1] || `${ghOwner}/${match.name}`,
+              description: match.description || '',
+              tech: match.keywords || [],
+              github: match.github || '',
+              live: match.website || '',
+              featured: true,
+            };
           }
-        }
+          try {
+            const res = await fetch('/api/projects');
+            if (res.ok) {
+              const repos = await res.json();
+              const ghMatch = (repos as any[]).find(
+                (r) => r.name?.toLowerCase() === repoName.toLowerCase()
+              );
+              if (ghMatch) {
+                return {
+                  name: ghMatch.name,
+                  repo: ghMatch.full_name || `${ghOwner}/${ghMatch.name}`,
+                  description: ghMatch.description || '',
+                  tech: ghMatch.topics || [],
+                  github: ghMatch.html_url || '',
+                  live: ghMatch.homepage || '',
+                  featured: false,
+                };
+              }
+            }
+          } catch {}
+          return null;
+        })(),
+        ragSearchParallel(query, repoName),
+      ]);
 
-        for (const candidate of candidates) {
-          const attempt = await ragSearch(candidate);
-          if (attempt && attempt.length > 0) {
-            snippets = attempt;
-            searchedRepo = candidate;
-            break;
-          }
-        }
-      } else {
-        snippets = (await ragSearch(undefined)) || [];
-      }
-
-      const mapped = snippets.map((s: any) => ({
+      const snippets = ragResult.snippets.map((s: any) => ({
         repo: s.repo,
         file: s.path,
         lines: s.start && s.end ? `${s.start}-${s.end}` : undefined,
@@ -418,15 +454,13 @@ export const searchProject = defineTool({
         technologies: Array.isArray(s.techStack) ? s.techStack : undefined
       }));
 
-      const reposFound = Array.from(new Set(mapped.map((s: any) => s.repo).filter(Boolean)));
-
       return {
         success: true,
         query,
-        reposSearched: searchedRepo || 'all',
-        reposFound,
-        resultCount: mapped.length,
-        snippets: mapped
+        project: metaResult,
+        repoSearched: ragResult.namespace || repoName,
+        resultCount: snippets.length,
+        snippets,
       };
     } catch {
       return { success: false, error: 'Search failed' };
