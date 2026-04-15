@@ -45,6 +45,11 @@
       "types": "./dist/server.d.ts",
       "import": "./dist/server.mjs",
       "require": "./dist/server.js"
+    },
+    "./pipeline": {
+      "types": "./dist/pipeline/index.d.ts",
+      "import": "./dist/pipeline/index.mjs",
+      "require": "./dist/pipeline/index.js"
     }
   },
   "files": [

@@ -10,6 +10,7 @@ export default defineConfig({
     'src/adapters/elevenlabs.ts',
     'src/adapters/assemblyai.ts',
     'src/adapters/pipecat.ts',
+    'src/pipeline/index.ts',
   ],
   format: ['cjs', 'esm'],
   dts: true,
@@ -21,5 +22,8 @@ export default defineConfig({
     'livekit-client',
     'livekit-server-sdk',
     '@deepgram/sdk',
+    '@cartesia/cartesia-js',
+    '@elevenlabs/elevenlabs-js',
+    'assemblyai',
   ],
 });
