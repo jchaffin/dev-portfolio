@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { SessionStatus, PortfolioContext } from '@/types';
-import { useTranscript, useRealtimeSession, useAudioRecorder, useSuggestions, emitSuggestions } from '@jchaffin/voicekit';
-import { openai } from '@jchaffin/voicekit/openai';
+import { useTranscript, useRealtimeSession, useAudioRecorder, useSuggestions, emitSuggestions, createVoiceAdapter } from '@jchaffin/voicekit';
+import type { VoiceProviderName } from '@jchaffin/voicekit';
 import { meAgent } from '@/agents/MeAgent';
 import resumeData from '@/data/resume.json';
 import type { ContactFormData, CalendlyData } from '@/components/voice/types';
@@ -24,21 +24,34 @@ function buildTranscriptionPrompt(): string {
   return Array.from(terms).join(', ');
 }
 
-const adapter = openai({
-  transcriptionPrompt: buildTranscriptionPrompt(),
-  turnDetection: {
-    type: 'server_vad',
-    threshold: 0.6,
-    prefix_padding_ms: 300,
-    silence_duration_ms: 500,
+const PROVIDER_OPTIONS: Record<VoiceProviderName, Record<string, unknown>> = {
+  openai: {
+    transcriptionPrompt: buildTranscriptionPrompt(),
+    turnDetection: {
+      type: 'server_vad',
+      threshold: 0.6,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 500,
+    },
   },
-});
+  elevenlabs: {
+    agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || '',
+  },
+  livekit: {},
+  deepgram: {},
+  pipecat: {},
+};
 
 interface UseVoiceAgentOptions {
   portfolioContext: PortfolioContext;
+  provider?: VoiceProviderName;
 }
 
-export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
+export function useVoiceAgent({ portfolioContext, provider = 'openai' }: UseVoiceAgentOptions) {
+  const adapter = useMemo(
+    () => createVoiceAdapter(provider, PROVIDER_OPTIONS[provider] || {}),
+    [provider],
+  );
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('DISCONNECTED');
   const isConnected = sessionStatus === 'CONNECTED';
   const isDisconnected = sessionStatus === 'DISCONNECTED';
