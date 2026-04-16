@@ -241,51 +241,8 @@ export type {
 
 export { EventEmitter } from './core';
 
-// ---------------------------------------------------------------------------
-// Provider-switching factory
-// ---------------------------------------------------------------------------
-
-import type { VoiceAdapter } from './core/types';
-
+// Provider type (for app-level switching logic)
 export type VoiceProviderName = 'openai' | 'elevenlabs' | 'livekit' | 'deepgram' | 'pipecat';
-
-/**
- * Create a VoiceAdapter by provider name.
- * Uses dynamic import() so unused adapters and their peer deps are never loaded.
- *
- * ```ts
- * const adapter = await createVoiceAdapter('openai', { transcriptionPrompt: '...' });
- * ```
- */
-export async function createVoiceAdapter(
-  provider: VoiceProviderName,
-  options: Record<string, unknown> = {},
-): Promise<VoiceAdapter> {
-  switch (provider) {
-    case 'openai': {
-      const { openai } = await import('./adapters/openai');
-      return openai(options as any);
-    }
-    case 'elevenlabs': {
-      const { elevenlabs } = await import('./adapters/elevenlabs');
-      return elevenlabs(options as any);
-    }
-    case 'livekit': {
-      const { livekit } = await import('./adapters/livekit');
-      return livekit(options as any);
-    }
-    case 'deepgram': {
-      const { deepgram } = await import('./adapters/deepgram');
-      return deepgram(options as any);
-    }
-    case 'pipecat': {
-      const { pipecat } = await import('./adapters/pipecat');
-      return pipecat(options as any);
-    }
-    default:
-      throw new Error(`Unknown voice provider: "${provider}". Use one of: openai, elevenlabs, livekit, deepgram, pipecat`);
-  }
-}
 
 /**
  * @deprecated Use `VoiceAgentConfig` instead. `RealtimeAgent` was the OpenAI-specific type.
