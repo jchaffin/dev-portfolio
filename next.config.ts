@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     // Disable strict mode for more lenient builds
     forceSwcTransforms: false,
   },
-  serverExternalPackages: ["sharp"],
+  serverExternalPackages: ["sharp", "@xenova/transformers", "onnxruntime-web"],
   turbopack: {
     resolveAlias: {
       // Use WASM build to avoid native libonnxruntime dependency (e.g. on Vercel / dev with Turbopack)
