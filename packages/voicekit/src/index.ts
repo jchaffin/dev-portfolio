@@ -251,35 +251,35 @@ export type VoiceProviderName = 'openai' | 'elevenlabs' | 'livekit' | 'deepgram'
 
 /**
  * Create a VoiceAdapter by provider name.
+ * Uses dynamic import() so unused adapters and their peer deps are never loaded.
  *
  * ```ts
- * import { createVoiceAdapter } from '@jchaffin/voicekit';
- * const adapter = createVoiceAdapter('openai', { transcriptionPrompt: '...' });
+ * const adapter = await createVoiceAdapter('openai', { transcriptionPrompt: '...' });
  * ```
  */
-export function createVoiceAdapter(
+export async function createVoiceAdapter(
   provider: VoiceProviderName,
   options: Record<string, unknown> = {},
-): VoiceAdapter {
+): Promise<VoiceAdapter> {
   switch (provider) {
     case 'openai': {
-      const { openai } = require('./adapters/openai') as typeof import('./adapters/openai');
+      const { openai } = await import('./adapters/openai');
       return openai(options as any);
     }
     case 'elevenlabs': {
-      const { elevenlabs } = require('./adapters/elevenlabs') as typeof import('./adapters/elevenlabs');
+      const { elevenlabs } = await import('./adapters/elevenlabs');
       return elevenlabs(options as any);
     }
     case 'livekit': {
-      const { livekit } = require('./adapters/livekit') as typeof import('./adapters/livekit');
+      const { livekit } = await import('./adapters/livekit');
       return livekit(options as any);
     }
     case 'deepgram': {
-      const { deepgram } = require('./adapters/deepgram') as typeof import('./adapters/deepgram');
+      const { deepgram } = await import('./adapters/deepgram');
       return deepgram(options as any);
     }
     case 'pipecat': {
-      const { pipecat } = require('./adapters/pipecat') as typeof import('./adapters/pipecat');
+      const { pipecat } = await import('./adapters/pipecat');
       return pipecat(options as any);
     }
     default:
