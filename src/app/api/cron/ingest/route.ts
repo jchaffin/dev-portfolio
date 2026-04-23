@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required env vars' }, { status: 500 });
   }
 
-  const concurrency = Math.max(1, parseInt(process.env.INGEST_CONCURRENCY ?? '4', 10));
+  const concurrency = 4;
 
   try {
     const repos = await listUserRepos(token);

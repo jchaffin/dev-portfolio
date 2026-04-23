@@ -43,7 +43,7 @@ async function main() {
   const index = pinecone.index(indexName);
 
   // Ingest each repo with bounded concurrency
-  const concurrency = Math.max(1, parseInt(process.env.INGEST_CONCURRENCY ?? '4', 10));
+  const concurrency = 4;
   console.log(`⚡ Concurrency: ${concurrency}`);
 
   const results: IngestResult[] = [];
