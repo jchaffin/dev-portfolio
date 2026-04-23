@@ -146,10 +146,9 @@ interface DeepDiveModalProps {
   onTabChange: (tab: 'overview' | 'images' | 'sources') => void;
   loading: boolean;
   onClose: () => void;
-  onRegenerate: () => void;
 }
 
-export function DeepDiveModal({ open, tab, onTabChange, loading, onClose, onRegenerate }: DeepDiveModalProps) {
+export function DeepDiveModal({ open, tab, onTabChange, loading, onClose }: DeepDiveModalProps) {
   if (!open) return null;
 
   return (
@@ -173,16 +172,6 @@ export function DeepDiveModal({ open, tab, onTabChange, loading, onClose, onRege
             {open.data ? open.data.title : `${open.title} — Loading…`}
           </h3>
           <div className="flex items-center gap-2">
-            {open.data && open.key && (
-              <button
-                type="button"
-                onClick={onRegenerate}
-                disabled={loading}
-                className="px-3 py-1.5 text-sm rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Regenerating…' : 'Regenerate'}
-              </button>
-            )}
             <button
               type="button"
               onClick={onClose}

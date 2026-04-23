@@ -286,26 +286,12 @@ export default function RecentWorkSection() {
     setDeepDiveTab('overview');
     setDeepDiveLoading(true);
     try {
-      const res = await fetch(`/api/projects/research?key=${encodeURIComponent(key)}&refresh=1`);
+      const res = await fetch(`/api/projects/research?key=${encodeURIComponent(key)}`);
       if (!res.ok) throw new Error('Failed to load');
       const data: ProjectDeepDive = await res.json();
       setOpenDeepDive((prev) => (prev ? { ...prev, data } : null));
     } catch {
       setOpenDeepDive(null);
-    } finally {
-      setDeepDiveLoading(false);
-    }
-  }
-
-  async function regenerateDeepDive() {
-    const key = openDeepDive?.key;
-    if (!key) return;
-    setDeepDiveLoading(true);
-    try {
-      const res = await fetch(`/api/projects/research?key=${encodeURIComponent(key)}&refresh=1`);
-      if (!res.ok) throw new Error('Failed to regenerate');
-      const data: ProjectDeepDive = await res.json();
-      setOpenDeepDive((prev) => (prev ? { ...prev, data } : null));
     } finally {
       setDeepDiveLoading(false);
     }
@@ -431,7 +417,6 @@ export default function RecentWorkSection() {
             onTabChange={setDeepDiveTab}
             loading={deepDiveLoading}
             onClose={() => setOpenDeepDive(null)}
-            onRegenerate={regenerateDeepDive}
           />
         )}
       </AnimatePresence>
