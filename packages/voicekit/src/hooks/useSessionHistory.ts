@@ -105,6 +105,9 @@ export function useSessionHistory() {
     };
     
     if (itemId && role) {
+      // The transcript-delta path owns this item — don't let history overwrite it.
+      if (accumulatedTextRef.current.has(itemId)) return;
+
       let text = extractMessageText(content);
       
       if (role === 'assistant' && !text) {
@@ -133,7 +136,9 @@ export function useSessionHistory() {
       const { itemId, role, content = [] } = item as { itemId: string; role?: string; content: unknown[] };
       
       if (interruptedItemsRef.current.has(itemId)) return;
-      if (role === 'assistant') return;
+      if (role !== 'user') return;
+      // The transcript-delta path owns this item while it's accumulating.
+      if (accumulatedTextRef.current.has(itemId)) return;
       
       const text = extractMessageText(content);
       if (text) {
@@ -174,7 +179,19 @@ export function useSessionHistory() {
 
       const finalText = accumulatedText || (item.transcript as string) || '';
       const stripped = finalText.replace(/[\s.…]+/g, '');
+
       if (stripped.length > 0) {
+        // Suppress single-word or near-empty transcripts from echo / ambient noise.
+        // Real utterances have at least 2 meaningful words.
+        const wordCount = finalText.trim()
+          .split(/\s+/)
+          .filter(w => /[a-zA-Z0-9]/.test(w)).length;
+
+        if (role === 'user' && wordCount < 2) {
+          updateTranscriptItem(itemId, { isHidden: true, status: 'DONE' });
+          return;
+        }
+
         updateTranscriptMessage(itemId, finalText, false, role);
       }
       

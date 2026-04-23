@@ -8,29 +8,12 @@ import { meAgent } from '@/agents/MeAgent';
 import resumeData from '@/data/resume.json';
 import type { ContactFormData, CalendlyData } from '@/components/voice/types';
 
-function buildTranscriptionPrompt(): string {
-  const terms: Set<string> = new Set();
-  if (resumeData.name) terms.add(resumeData.name);
-  for (const exp of resumeData.experience || []) {
-    if (exp.company) terms.add(exp.company);
-    for (const alias of (exp as any).aliases || []) terms.add(alias);
-    for (const kw of exp.keywords || []) terms.add(kw);
-  }
-  for (const skill of resumeData.skills || []) terms.add(skill);
-  for (const proj of (resumeData as any).projects || []) {
-    if (proj.name) terms.add(proj.name);
-    for (const kw of proj.keywords || []) terms.add(kw);
-  }
-  return Array.from(terms).join(', ');
-}
-
 const adapter = openai({
-  transcriptionPrompt: buildTranscriptionPrompt(),
   turnDetection: {
     type: 'server_vad',
-    threshold: 0.6,
+    threshold: 0.8,
     prefix_padding_ms: 300,
-    silence_duration_ms: 500,
+    silence_duration_ms: 700,
   },
 });
 
@@ -208,6 +191,9 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
           meta: { url: p.website, github: p.github, tech: p.keywords },
         })),
       });
+
+      // Skip greeting if a suggestion is already pending — it will trigger its own response
+      if (pendingSuggestionRef.current) return;
 
       const greetingTimer = setTimeout(() => sendEvent({ type: 'response.create' }), 1200);
       return () => clearTimeout(greetingTimer);

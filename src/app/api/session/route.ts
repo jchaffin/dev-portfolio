@@ -1,33 +1,4 @@
 import { NextResponse } from "next/server";
-import resumeData from "@/data/resume.json";
-
-// Build transcription vocabulary from resume data
-function buildTranscriptionPrompt(): string {
-  const terms: Set<string> = new Set();
-  
-  // Add name
-  if (resumeData.name) terms.add(resumeData.name);
-  
-  // Add companies and their aliases
-  for (const exp of resumeData.experience || []) {
-    if (exp.company) terms.add(exp.company);
-    // Add explicit aliases (e.g., "Sparke" for Studyfetch)
-    for (const alias of (exp as any).aliases || []) {
-      terms.add(alias);
-    }
-    // Add keywords from experience
-    for (const kw of exp.keywords || []) {
-      terms.add(kw);
-    }
-  }
-  
-  // Add skills
-  for (const skill of resumeData.skills || []) {
-    terms.add(skill);
-  }
-  
-  return Array.from(terms).join(', ');
-}
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -67,9 +38,10 @@ export async function POST() {
             input: {
               transcription: {
                 model: 'gpt-4o-transcribe',
-                // Vocabulary hints for better transcription accuracy - built from resume
-                prompt: buildTranscriptionPrompt(),
               },
+            },
+            output: {
+              voice: 'ash',
             },
           },
         },

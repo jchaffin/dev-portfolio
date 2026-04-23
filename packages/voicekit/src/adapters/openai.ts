@@ -87,6 +87,8 @@ class OpenAISession
   private options: SessionOptions;
   private agentConfig: VoiceAgentConfig;
   private responseInFlight = false;
+  /** itemId of the assistant response currently streaming audio/transcript deltas. */
+  private currentSpeakingItemId: string | null = null;
 
   constructor(agent: RealtimeAgent, options: SessionOptions, agentConfig: VoiceAgentConfig) {
     super();
@@ -162,8 +164,22 @@ class OpenAISession
   async sendMessage(text: string): Promise<void> {
     if (!this.session) throw new Error('Session not connected');
 
+    // Treat text input the same as voice barge-in: synthesize the truncation
+    // event the server sends for speech, so handleTruncation fires on the
+    // current speaking item and the display is cut at the right spot.
+    if (this.currentSpeakingItemId) {
+      this.emit('raw_event', {
+        type: 'conversation.item.truncated',
+        item_id: this.currentSpeakingItemId,
+      });
+      this.currentSpeakingItemId = null;
+    }
+
+    // Always interrupt so any playing audio stops immediately, regardless of
+    // whether a response is still being generated server-side.
+    this.session.interrupt();
+
     if (this.responseInFlight) {
-      this.session.interrupt();
       await new Promise<void>((resolve) => {
         const onDone = (event: Record<string, unknown>) => {
           if ((event as any).type === 'response.done' || (event as any).type === 'response.cancelled') {
@@ -243,6 +259,7 @@ class OpenAISession
 
         case 'response.audio_transcript.delta':
         case 'response.output_audio_transcript.delta':
+          this.currentSpeakingItemId = event.item_id as string;
           this.emit('assistant_transcript', {
             itemId: event.item_id as string,
             delta: (event.delta as string) || '',
@@ -252,6 +269,7 @@ class OpenAISession
 
         case 'response.audio_transcript.done':
         case 'response.output_audio_transcript.done':
+          this.currentSpeakingItemId = null;
           this.emit('assistant_transcript', {
             itemId: event.item_id as string,
             text: (event.transcript as string) || '',

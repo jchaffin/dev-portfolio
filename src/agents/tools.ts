@@ -306,19 +306,27 @@ export const getProjects = defineTool({
 });
 
 /** Resolve a bare repo name to owner/repo by checking resume projects, the GitHub API, and known orgs. */
+/** Normalize a repo name to a GitHub slug: lowercase, dots/spaces → dashes. */
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[.\s]+/g, '-');
+}
+
 async function resolveRepo(repo: string | undefined): Promise<string | undefined> {
   if (!repo) return undefined;
   if (repo.includes('/')) return repo;
 
   const bare = repo.toLowerCase();
+  const slugBare = slugify(bare);
 
-  // 1. Check featured projects' GitHub URLs for an exact repo-name match
+  // 1. Check featured projects' GitHub URLs — match on exact name OR slug-normalized name
   const projects = ((resumeData as any).projects || []) as any[];
   for (const p of projects) {
     for (const url of [p.github, ...(p.additionalSourceUrls || [])]) {
       if (typeof url !== 'string') continue;
       const m = url.match(/github\.com\/([^/?#]+\/[^/?#]+)/i);
-      if (m?.[1] && m[1].split('/')[1]?.toLowerCase() === bare) return m[1];
+      if (!m?.[1]) continue;
+      const repoSlug = m[1].split('/')[1]?.toLowerCase() ?? '';
+      if (repoSlug === bare || repoSlug === slugBare) return m[1];
     }
   }
 
@@ -329,6 +337,7 @@ async function resolveRepo(repo: string | undefined): Promise<string | undefined
       const repos = await res.json();
       const match = (repos as any[]).find(
         (r) => r.name?.toLowerCase() === bare
+          || r.name?.toLowerCase() === slugBare
           || r.full_name?.toLowerCase() === bare
       );
       if (match?.full_name) return match.full_name;
@@ -344,38 +353,58 @@ function repoCandidates(repo: string): string[] {
   if (repo.includes('/')) return [repo];
   const seen = new Set<string>();
   const out: string[] = [];
+  const slug = slugify(repo);
+  const names = slug !== repo.toLowerCase() ? [repo, slug] : [repo];
   for (const owner of knownGhOwners) {
-    const candidate = `${owner}/${repo}`;
-    if (!seen.has(candidate.toLowerCase())) {
-      seen.add(candidate.toLowerCase());
-      out.push(candidate);
+    for (const name of names) {
+      const candidate = `${owner}/${name}`;
+      if (!seen.has(candidate.toLowerCase())) {
+        seen.add(candidate.toLowerCase());
+        out.push(candidate);
+      }
     }
   }
   return out;
 }
 
-async function ragSearchParallel(query: string, repo: string): Promise<{ snippets: any[]; namespace: string | undefined }> {
-  async function ragSearch(namespace: string | undefined) {
-    const res = await fetch('/api/rag', {
+async function ragFetch(body: object, timeoutMs = 25000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch('/api/rag', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, repo: namespace, limit: 5 })
+      body: JSON.stringify(body),
+      signal: controller.signal,
     });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.snippets || []) as any[];
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+async function ragSearchParallel(query: string, repo: string): Promise<{ snippets: any[]; namespace: string | undefined }> {
+  async function ragSearch(namespace: string | undefined) {
+    try {
+      const res = await ragFetch({ query, repo: namespace, limit: 5 });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.snippets || []) as any[];
+    } catch {
+      return [];
+    }
   }
 
   const bare = repo.includes('/') ? undefined : repo;
   const resolved = await resolveRepo(repo);
 
+  const seen = new Set<string>();
   const candidates: string[] = [];
-  if (bare) candidates.push(bare);
-  if (resolved && resolved !== bare) candidates.push(resolved);
+  const add = (c: string) => { if (!seen.has(c.toLowerCase())) { seen.add(c.toLowerCase()); candidates.push(c); } };
+
+  if (bare) add(bare);
+  if (resolved) add(resolved);
   if (!repo.includes('/')) {
-    for (const c of repoCandidates(repo)) {
-      if (!candidates.includes(c)) candidates.push(c);
-    }
+    for (const c of repoCandidates(repo)) add(c);
   }
 
   if (candidates.length === 0) return { snippets: [], namespace: undefined };
@@ -507,11 +536,7 @@ export const findProjectsByTech = defineTool({
         }
       };
 
-      const skillRes = await fetch('/api/rag', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ skill: token, limit: 40 }),
-      });
+      const skillRes = await ragFetch({ skill: token, limit: 40 });
 
       let skillData: { success?: boolean; snippets?: unknown[] } | null = null;
       if (skillRes.ok) {
@@ -530,20 +555,12 @@ export const findProjectsByTech = defineTool({
           if (typeof r === 'string' && r.length) repoSlugs.add(r);
         }
       }
-      const repos = Array.from(repoSlugs).slice(0, 10);
+      const repos = Array.from(repoSlugs).slice(0, 4);
       const ragResults =
         repos.length > 0
           ? await Promise.all(
               repos.map((r) =>
-                fetch('/api/rag', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    query: token,
-                    repo: r,
-                    limit: 10,
-                  }),
-                })
+                ragFetch({ query: token, repo: r, limit: 8 })
               )
             )
           : [];

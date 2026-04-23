@@ -8,6 +8,24 @@ import { cacheGet, cacheSet, cacheKey } from '@/lib/redis';
 const inflight = new Map<string, Promise<any>>();
 const RAG_TTL = 300; // 5 minutes
 
+// Module-level singleton — keeps the lib's in-process embedCache (60 s) and
+// searchCache (10 s) alive across requests so repeated queries skip the
+// ~9 s embedding round-trip after the first hit.
+let _ghRag: ReturnType<typeof createGhRag> | null = null;
+
+function getGhRag() {
+  if (_ghRag) return _ghRag;
+  envConfig();
+  const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+  const index = pinecone.index(getPineconeIndexName());
+  _ghRag = createGhRag({
+    openaiApiKey: process.env.OPENAI_API_KEY!,
+    githubToken: process.env.GITHUB_TOKEN,
+    pine: { index },
+  });
+  return _ghRag;
+}
+
 const makeKey = (repo: string, query: string, limit: number) =>
   cacheKey('rag', repo || 'all', query, String(limit));
 
@@ -295,20 +313,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize Pinecone
-    const pinecone = new Pinecone({
-      apiKey: process.env.PINECONE_API_KEY!
-    });
-    
-    const indexName = getPineconeIndexName();
-    const index = pinecone.index(indexName);
-
-    const ghRag = createGhRag({
-      openaiApiKey: process.env.OPENAI_API_KEY!,
-      githubToken: process.env.GITHUB_TOKEN,
-      pine: {
-        index
-      }
-    });
+    const ghRag = getGhRag();
 
     const p = (async () => {
       if (skillTrim) {
@@ -439,15 +444,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ...sanitizeRagPayload(data), deduped: true });
     }
 
-    const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
-    const indexName = getPineconeIndexName();
-    const index = pinecone.index(indexName);
-
-    const ghRag = createGhRag({
-      openaiApiKey: process.env.OPENAI_API_KEY!,
-      githubToken: process.env.GITHUB_TOKEN,
-      pine: { index }
-    });
+    const ghRag = getGhRag();
 
     const p = ghRag.search({ repo: repoToSearch, query }).then(async (results) => {
       const data = sanitizeRagPayload({

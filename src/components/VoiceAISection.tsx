@@ -282,11 +282,24 @@ const VoiceAIContent = () => {
                     name: s.name,
                     category: s.category,
                   }))}
-                  projects={projects.map(p => ({
-                    id: p.title.toLowerCase().replace(/\s+/g, '-'),
-                    name: p.title,
-                    description: p.description,
-                  }))}
+                  projects={[
+                    // Resume featured projects first
+                    ...((resumeData as any).projects || []).map((p: any) => ({
+                      id: p.name.toLowerCase().replace(/\s+/g, '-'),
+                      name: p.name,
+                      description: p.description || '',
+                    })),
+                    // Then GitHub repos not already in the resume list
+                    ...projects
+                      .filter(p => !((resumeData as any).projects || []).some(
+                        (rp: any) => rp.name.toLowerCase() === p.title.toLowerCase()
+                      ))
+                      .map(p => ({
+                        id: p.title.toLowerCase().replace(/\s+/g, '-'),
+                        name: p.title,
+                        description: p.description,
+                      })),
+                  ]}
                   experiences={experiences.map(e => ({
                     id: e.company.toLowerCase().replace(/\s+/g, '-'),
                     company: e.company,
