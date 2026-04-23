@@ -6,7 +6,9 @@ import { cacheGet, cacheSet, cacheKey } from '@/lib/redis';
 
 // Inflight deduplication stays in-memory (per-process, short-lived)
 const inflight = new Map<string, Promise<any>>();
-const RAG_TTL = 300; // 5 minutes
+// Ingested data only changes on daily cron runs; default to 1 hour.
+// Override with RAG_CACHE_TTL env var (seconds).
+const RAG_TTL = parseInt(process.env.RAG_CACHE_TTL ?? '3600', 10);
 
 // Module-level singleton — keeps the lib's in-process embedCache (60 s) and
 // searchCache (10 s) alive across requests so repeated queries skip the

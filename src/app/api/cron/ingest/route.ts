@@ -57,9 +57,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required env vars' }, { status: 500 });
   }
 
+  const concurrency = Math.max(1, parseInt(process.env.INGEST_CONCURRENCY ?? '4', 10));
+
   try {
     const repos = await listUserRepos(token);
-    console.log(`[cron/ingest] Found ${repos.length} repos to ingest`);
+    console.log(`[cron/ingest] Found ${repos.length} repos to ingest (concurrency=${concurrency})`);
 
     const pinecone = new Pinecone({ apiKey: pineconeKey });
     const index = pinecone.index(indexName);
@@ -68,24 +70,30 @@ export async function GET(request: NextRequest) {
     let failed = 0;
     const errors: string[] = [];
 
-    for (const repo of repos) {
-      try {
-        const ghRag = createGhRag({
-          openaiApiKey: openaiKey,
-          githubToken: token,
-          pine: { index, namespace: repo.full_name },
-        });
-        const gitUrl = `https://github.com/${repo.full_name}.git`;
-        await ghRag.ingest({ gitUrl });
-        success++;
-        console.log(`[cron/ingest] ✓ ${repo.full_name}`);
-      } catch (err) {
-        failed++;
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${repo.full_name}: ${msg}`);
-        console.error(`[cron/ingest] ✗ ${repo.full_name}: ${msg}`);
+    const queue = [...repos];
+    const workers = Array.from({ length: Math.min(concurrency, repos.length) }, async () => {
+      while (queue.length > 0) {
+        const repo = queue.shift();
+        if (!repo) break;
+        try {
+          const ghRag = createGhRag({
+            openaiApiKey: openaiKey,
+            githubToken: token,
+            pine: { index, namespace: repo.full_name },
+          });
+          const gitUrl = `https://github.com/${repo.full_name}.git`;
+          await ghRag.ingest({ gitUrl });
+          success++;
+          console.log(`[cron/ingest] ✓ ${repo.full_name}`);
+        } catch (err) {
+          failed++;
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push(`${repo.full_name}: ${msg}`);
+          console.error(`[cron/ingest] ✗ ${repo.full_name}: ${msg}`);
+        }
       }
-    }
+    });
+    await Promise.all(workers);
 
     return NextResponse.json({
       success: true,

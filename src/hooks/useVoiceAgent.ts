@@ -6,14 +6,14 @@ import { useTranscript, useRealtimeSession, useAudioRecorder, useSuggestions, em
 import { openai } from '@jchaffin/voicekit/openai';
 import { meAgent } from '@/agents/MeAgent';
 import resumeData from '@/data/resume.json';
-import type { ContactFormData, CalendlyData } from '@/components/voice/types';
+import type { ContactFormData, CalendlyData, RichItem } from '@/components/voice/types';
 
 const adapter = openai({
   turnDetection: {
     type: 'server_vad',
-    threshold: 0.8,
-    prefix_padding_ms: 300,
-    silence_duration_ms: 700,
+    threshold: 0.9,
+    prefix_padding_ms: 500,
+    silence_duration_ms: 1200,
   },
 });
 
@@ -36,6 +36,7 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
   const [calendlyModalOpen, setCalendlyModalOpen] = useState(false);
   const [contactFormData, setContactFormData] = useState<ContactFormData>({});
   const [calendlyData, setCalendlyData] = useState<CalendlyData>({ url: '' });
+  const [richItems, setRichItems] = useState<RichItem[]>([]);
 
   const { suggestions: agentSuggestions, clearSuggestions } = useSuggestions();
 
@@ -204,6 +205,7 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     if (isConnectedRef() || isConnectingRef()) await disconnectFromRealtime();
     clearSuggestions();
+    setRichItems([]);
     setContactFormOpen(false);
     setContactFormData({});
     greetingSentRef.current = false;
@@ -239,6 +241,16 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
         silenceAgent();
         setCalendlyData({ url: output.calendly_url });
         setCalendlyModalOpen(true);
+      } else if (name === 'render_project_card' && output.success) {
+        setRichItems((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), type: 'project_card', createdAtMs: Date.now(), data: output.data },
+        ]);
+      } else if (name === 'render_mermaid' && output.success) {
+        setRichItems((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), type: 'mermaid', createdAtMs: Date.now(), data: output.data },
+        ]);
       }
     };
     window.addEventListener('agent-tool-response', handler);
@@ -282,6 +294,7 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     isConnected,
     isDisconnected,
     transcriptItems,
+    richItems,
     toggleConnection,
     sendMessage,
     resetChat,

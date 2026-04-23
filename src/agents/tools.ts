@@ -885,6 +885,52 @@ export const showSuggestions = defineTool({
 });
 
 // ============================================================================
+// Rich UI rendering
+// ============================================================================
+
+export const renderProjectSummary = defineTool({
+  name: 'render_project_summary',
+  description:
+    'Displays a visual project card in the chat UI. Call this after search_project when showing a specific project — pass the name, description, tech stack, GitHub URL, and live URL from the tool result. Do not call for general project browsing.',
+  parameters: {
+    name: { type: 'string', description: 'Project name' },
+    description: { type: 'string', description: 'One-sentence project description' },
+    tech: { type: 'array', description: 'Key technologies', items: { type: 'string' } },
+    github: { type: 'string', description: 'GitHub repository URL (optional)' },
+    live: { type: 'string', description: 'Live site URL (optional)' },
+  },
+  required: ['name'],
+  execute: ({ name, description, tech, github, live }: {
+    name: string;
+    description?: string;
+    tech?: string[];
+    github?: string;
+    live?: string;
+  }) => {
+    emitUI('render_project_card', { data: { name, description, tech, github, live } });
+    return { success: true };
+  },
+});
+
+export const renderDiagram = defineTool({
+  name: 'render_diagram',
+  description:
+    'Renders a Mermaid diagram inline in the chat. Use when the user asks to diagram, visualize, or map something — architecture, tech stack, timeline, data flow, or relationships. Pass valid Mermaid syntax (flowchart TD, sequenceDiagram, classDiagram, etc.).',
+  parameters: {
+    definition: {
+      type: 'string',
+      description: 'Valid Mermaid diagram definition, e.g. "flowchart TD\\n  A --> B"',
+    },
+    title: { type: 'string', description: 'Short label shown above the diagram (optional)' },
+  },
+  required: ['definition'],
+  execute: ({ definition, title }: { definition: string; title?: string }) => {
+    emitUI('render_mermaid', { data: { definition, title } });
+    return { success: true };
+  },
+});
+
+// ============================================================================
 // Export all tools as array
 // ============================================================================
 
@@ -899,5 +945,7 @@ export const allTools = [
   getExperience,
   searchExperience,
   getSkills,
-  showSuggestions
+  showSuggestions,
+  renderProjectSummary,
+  renderDiagram,
 ];

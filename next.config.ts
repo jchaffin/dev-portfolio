@@ -11,10 +11,13 @@ const nextConfig: NextConfig = {
     // Disable strict mode for more lenient builds
     forceSwcTransforms: false,
   },
-  serverExternalPackages: ["sharp", "@xenova/transformers", "onnxruntime-web"],
+  // sharp must stay external (native binary). @xenova/transformers is intentionally
+  // NOT listed here so the bundler can process it and apply the onnxruntime-node alias
+  // below — substituting the WASM backend for the native binary (which fails on Vercel).
+  serverExternalPackages: ["sharp", "onnxruntime-node"],
   turbopack: {
     resolveAlias: {
-      // Use WASM build to avoid native libonnxruntime dependency (e.g. on Vercel / dev with Turbopack)
+      // Redirect native onnxruntime-node to the WASM build so no platform binary is needed.
       "onnxruntime-node": "onnxruntime-web",
     },
   },
@@ -22,8 +25,8 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       sharp$: false,
-      // Server: use WASM instead of native onnxruntime-node (no libonnxruntime.so on Vercel)
-      // Client: do not bundle onnxruntime-node
+      // Server: redirect native onnxruntime-node to the WASM build.
+      // Client: drop onnxruntime-node entirely (unused in browser).
       ...(isServer
         ? { "onnxruntime-node": "onnxruntime-web" }
         : { "onnxruntime-node$": false }),

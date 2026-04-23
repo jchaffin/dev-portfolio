@@ -75,3 +75,16 @@ export interface ContactFormData {
 export interface CalendlyData {
   url: string;
 }
+
+// Rich items rendered inline in the transcript by render_* tools
+export interface ProjectCardData {
+  name: string;
+  description?: string;
+  tech?: string[];
+  github?: string;
+  live?: string;
+}
+
+export type RichItem =
+  | { id: string; type: 'project_card'; createdAtMs: number; data: ProjectCardData }
+  | { id: string; type: 'mermaid'; createdAtMs: number; data: { definition: string; title?: string } };

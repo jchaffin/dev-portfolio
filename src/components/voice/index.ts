@@ -5,6 +5,8 @@ export { ProjectLinkWithPreview } from './ProjectLinkWithPreview';
 export { LinkWithPreview } from './LinkWithPreview';
 export { PlayButton } from './PlayButton';
 export { VoiceTranscript } from './VoiceTranscript';
+export { ProjectSummaryCard } from './ProjectSummaryCard';
+export { MermaidDiagram } from './MermaidDiagram';
 export { ChatInput } from './ChatInput';
 export { VoiceCommandDrawer } from './VoiceCommandDrawer';
 export { InlineContactForm } from './InlineContactForm';

@@ -112,6 +112,7 @@ const VoiceAIContent = () => {
   const {
     sessionStatus,
     transcriptItems,
+    richItems,
     toggleConnection,
     sendMessage,
     resetChat,
@@ -143,16 +144,16 @@ const VoiceAIContent = () => {
     return () => container.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Auto-scroll to bottom when new messages arrive (only if user hasn't scrolled up)
+  // Auto-scroll to bottom when new messages or rich items arrive (only if user hasn't scrolled up)
   useEffect(() => {
-    if (transcriptContainerRef.current && transcriptItems.length > 0 && !userScrolledUp.current) {
+    if (transcriptContainerRef.current && (transcriptItems.length > 0 || richItems.length > 0) && !userScrolledUp.current) {
       const container = transcriptContainerRef.current;
       container.scrollTo({
         top: container.scrollHeight,
         behavior: 'smooth'
       });
     }
-  }, [transcriptItems]);
+  }, [transcriptItems, richItems]);
 
   return (
     <section
@@ -268,7 +269,7 @@ const VoiceAIContent = () => {
                     )}
                   </div>
                 ) : (
-                  <VoiceTranscript items={transcriptItems} />
+                  <VoiceTranscript items={transcriptItems} richItems={richItems} />
                 )}
               </div>
             </div>

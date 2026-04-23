@@ -34,6 +34,7 @@ export async function POST() {
         session: {
           type: 'realtime',
           model: 'gpt-realtime',
+          max_response_output_tokens: 150,
           audio: {
             input: {
               transcription: {

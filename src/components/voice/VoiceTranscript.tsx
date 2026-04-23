@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import type { TranscriptItem } from './types';
+import type { TranscriptItem, RichItem } from './types';
 import { LinkWithPreview } from './LinkWithPreview';
 import { ProjectLinkWithPreview } from './ProjectLinkWithPreview';
+import { ProjectSummaryCard } from './ProjectSummaryCard';
+import { MermaidDiagram } from './MermaidDiagram';
 import resumeData from '@/data/resume.json';
 import { getProjects, type Project } from '@/lib/getProjects';
 
@@ -45,9 +47,10 @@ function generateNameVariations(name: string): string[] {
 
 interface VoiceTranscriptProps {
   items: TranscriptItem[];
+  richItems?: RichItem[];
 }
 
-export const VoiceTranscript: React.FC<VoiceTranscriptProps> = ({ items }) => {
+export const VoiceTranscript: React.FC<VoiceTranscriptProps> = ({ items, richItems = [] }) => {
   const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
@@ -92,37 +95,91 @@ export const VoiceTranscript: React.FC<VoiceTranscriptProps> = ({ items }) => {
       item.title?.replace(/[\s.…]+/g, '').length > 0
   );
 
+  // Merge transcript messages and rich items sorted by createdAtMs
+  const mergedRows = useMemo(() => {
+    type Row =
+      | { kind: 'transcript'; item: TranscriptItem }
+      | { kind: 'rich'; item: RichItem };
+
+    if (richItems.length === 0) {
+      return filteredItems.map((item): Row => ({ kind: 'transcript', item }));
+    }
+
+    const sorted = [...richItems].sort((a, b) => a.createdAtMs - b.createdAtMs);
+    const result: Row[] = [];
+    let richIdx = 0;
+
+    for (let i = 0; i < filteredItems.length; i++) {
+      const current = filteredItems[i];
+      const next = filteredItems[i + 1];
+      result.push({ kind: 'transcript', item: current });
+
+      // Insert rich items whose timestamp falls between this message and the next
+      while (richIdx < sorted.length) {
+        const ri = sorted[richIdx];
+        const afterCurrent = ri.createdAtMs >= current.createdAtMs;
+        const beforeNext = !next || ri.createdAtMs < next.createdAtMs;
+        if (afterCurrent && beforeNext) {
+          result.push({ kind: 'rich', item: ri });
+          richIdx++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    // Append remaining rich items (newer than all transcript messages)
+    while (richIdx < sorted.length) {
+      result.push({ kind: 'rich', item: sorted[richIdx++] });
+    }
+
+    return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredItems, richItems]);
+
   return (
     <>
-      {filteredItems.map((item) => {
-        const isUser = item.role === "user";
-        const title = item.title || "";
-        const displayTitle = title.startsWith("[") && title.endsWith("]")
+      {mergedRows.map((row) => {
+        if (row.kind === 'rich') {
+          const ri = row.item;
+          if (ri.type === 'project_card') {
+            return <ProjectSummaryCard key={ri.id} data={ri.data} />;
+          }
+          if (ri.type === 'mermaid') {
+            return <MermaidDiagram key={ri.id} definition={ri.data.definition} title={ri.data.title} />;
+          }
+          return null;
+        }
+
+        const item = row.item;
+        const isUser = item.role === 'user';
+        const title = item.title || '';
+        const displayTitle = title.startsWith('[') && title.endsWith(']')
           ? title.slice(1, -1)
           : title;
 
         return (
           <div
             key={item.itemId}
-            className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+            className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
           >
             <div
               className={`max-w-lg p-3 rounded-xl ${
                 isUser
-                  ? "bg-accent-secondary text-white"
-                  : "bg-theme-tertiary text-theme-primary"
+                  ? 'bg-accent-secondary text-white'
+                  : 'bg-theme-tertiary text-theme-primary'
               }`}
             >
               <div
                 className={`text-xs font-mono mb-1 ${
-                  isUser ? "text-white/80" : "text-theme-secondary"
+                  isUser ? 'text-white/80' : 'text-theme-secondary'
                 }`}
               >
                 {item.timestamp}
               </div>
               <div className="whitespace-pre-wrap">
-                <ParsedText 
-                  text={displayTitle} 
+                <ParsedText
+                  text={displayTitle}
                   variant={isUser ? 'light' : 'default'}
                   experienceLinks={experienceLinks}
                   projectLinks={projectLinks}

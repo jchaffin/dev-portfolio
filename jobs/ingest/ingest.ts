@@ -42,48 +42,43 @@ async function main() {
   const pinecone = new Pinecone({ apiKey: PINECONE_API_KEY });
   const index = pinecone.index(indexName);
 
-  // Ingest each repo
+  // Ingest each repo with bounded concurrency
+  const concurrency = Math.max(1, parseInt(process.env.INGEST_CONCURRENCY ?? '4', 10));
+  console.log(`⚡ Concurrency: ${concurrency}`);
+
   const results: IngestResult[] = [];
+  const queue = [...repos];
+  const workers = Array.from({ length: Math.min(concurrency, repos.length) }, async () => {
+    while (queue.length > 0) {
+      const repo = queue.shift();
+      if (!repo) break;
+      const gitUrl = repo.startsWith('http') ? repo : `https://github.com/${repo}.git`;
+      console.log(`\n📥 Ingesting: ${repo}`);
+      console.log(`   URL: ${gitUrl}`);
 
-  for (const repo of repos) {
-    const gitUrl = repo.startsWith('http') ? repo : `https://github.com/${repo}.git`;
-    console.log(`\n📥 Ingesting: ${repo}`);
-    console.log(`   URL: ${gitUrl}`);
-
-    // Full `owner/repo` avoids Pinecone namespace collisions (e.g. ProsodyAI/api vs other orgs).
-    const namespace = repo.includes('/') ? repo : undefined;
-    const ghRag = createGhRag({
-      openaiApiKey: OPENAI_API_KEY,
-      githubToken: GITHUB_TOKEN,
-      pine: { index, namespace },
-    });
-
-    const startTime = Date.now();
-    try {
-      const result = await ghRag.ingest({ gitUrl });
-      const durationMs = Date.now() - startTime;
-      
-      console.log(`   ✅ Success: ${result.files} files, ${result.chunks} chunks (${(durationMs / 1000).toFixed(1)}s)`);
-      results.push({
-        repo,
-        success: true,
-        files: result.files,
-        chunks: result.chunks,
-        durationMs,
+      // Full `owner/repo` avoids Pinecone namespace collisions (e.g. ProsodyAI/api vs other orgs).
+      const namespace = repo.includes('/') ? repo : undefined;
+      const ghRag = createGhRag({
+        openaiApiKey: OPENAI_API_KEY,
+        githubToken: GITHUB_TOKEN,
+        pine: { index, namespace },
       });
-    } catch (err) {
-      const durationMs = Date.now() - startTime;
-      const error = err instanceof Error ? err.message : String(err);
-      
-      console.error(`   ❌ Failed: ${error} (${(durationMs / 1000).toFixed(1)}s)`);
-      results.push({
-        repo,
-        success: false,
-        error,
-        durationMs,
-      });
+
+      const startTime = Date.now();
+      try {
+        const result = await ghRag.ingest({ gitUrl });
+        const durationMs = Date.now() - startTime;
+        console.log(`   ✅ Success: ${result.files} files, ${result.chunks} chunks (${(durationMs / 1000).toFixed(1)}s)`);
+        results.push({ repo, success: true, files: result.files, chunks: result.chunks, durationMs });
+      } catch (err) {
+        const durationMs = Date.now() - startTime;
+        const error = err instanceof Error ? err.message : String(err);
+        console.error(`   ❌ Failed: ${error} (${(durationMs / 1000).toFixed(1)}s)`);
+        results.push({ repo, success: false, error, durationMs });
+      }
     }
-  }
+  });
+  await Promise.all(workers);
 
   // Summary
   const successful = results.filter(r => r.success);
