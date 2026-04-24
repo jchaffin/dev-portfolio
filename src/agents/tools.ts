@@ -382,7 +382,15 @@ async function ragFetch(body: object, timeoutMs = 25000): Promise<Response> {
   }
 }
 
+// Session-level cache: avoids re-embedding the same query within a voice session.
+const _ragSnippetCache = new Map<string, { snippets: any[]; namespace: string | undefined; expires: number }>();
+const RAG_SNIPPET_CACHE_MS = 5 * 60 * 1000;
+
 async function ragSearchParallel(query: string, repo: string): Promise<{ snippets: any[]; namespace: string | undefined }> {
+  const sessionKey = `${query.toLowerCase()}::${repo.toLowerCase()}`;
+  const hit = _ragSnippetCache.get(sessionKey);
+  if (hit && hit.expires > Date.now()) return { snippets: hit.snippets, namespace: hit.namespace };
+
   async function ragSearch(namespace: string | undefined) {
     try {
       const res = await ragFetch({ query, repo: namespace, limit: 5 });
@@ -394,27 +402,46 @@ async function ragSearchParallel(query: string, repo: string): Promise<{ snippet
     }
   }
 
-  const bare = repo.includes('/') ? undefined : repo;
-  const resolved = await resolveRepo(repo);
+  let result: { snippets: any[]; namespace: string | undefined };
 
-  const seen = new Set<string>();
-  const candidates: string[] = [];
-  const add = (c: string) => { if (!seen.has(c.toLowerCase())) { seen.add(c.toLowerCase()); candidates.push(c); } };
+  if (repo.includes('/')) {
+    // Already a specific owner/repo — one call.
+    const snippets = await ragSearch(repo);
+    result = { snippets, namespace: repo };
+  } else {
+    // Try to resolve to a definitive owner/repo first.
+    const resolved = await resolveRepo(repo);
 
-  if (bare) add(bare);
-  if (resolved) add(resolved);
-  if (!repo.includes('/')) {
-    for (const c of repoCandidates(repo)) add(c);
+    if (resolved && resolved.includes('/')) {
+      // Resolved to a single namespace — one call, no guessing.
+      const snippets = await ragSearch(resolved);
+      result = snippets.length > 0
+        ? { snippets, namespace: resolved }
+        : { snippets: [], namespace: resolved };
+    } else {
+      // Fall back to parallel candidates only when resolution is ambiguous.
+      const seen = new Set<string>();
+      const candidates: string[] = [];
+      const add = (c: string) => { if (!seen.has(c.toLowerCase())) { seen.add(c.toLowerCase()); candidates.push(c); } };
+      if (resolved) add(resolved);
+      for (const c of repoCandidates(repo)) add(c);
+      if (candidates.length === 0) return { snippets: [], namespace: undefined };
+
+      const results = await Promise.all(
+        candidates.map(async (c) => ({ ns: c, hits: await ragSearch(c) }))
+      );
+      const best = results.find(r => r.hits.length > 0);
+      result = best ? { snippets: best.hits, namespace: best.ns } : { snippets: [], namespace: candidates[0] };
+    }
   }
 
-  if (candidates.length === 0) return { snippets: [], namespace: undefined };
-
-  const results = await Promise.all(
-    candidates.map(async (c) => ({ ns: c, hits: await ragSearch(c) }))
-  );
-  const best = results.find(r => r.hits.length > 0);
-  return best ? { snippets: best.hits, namespace: best.ns } : { snippets: [], namespace: candidates[0] };
+  _ragSnippetCache.set(sessionKey, { ...result, expires: Date.now() + RAG_SNIPPET_CACHE_MS });
+  return result;
 }
+
+// Per-session cache for full search_project results — follow-up turns hit this instead of RAG.
+const _projectResultCache = new Map<string, { result: any; expires: number }>();
+const PROJECT_CACHE_MS = 10 * 60 * 1000;
 
 export const searchProject = defineTool({
   name: 'search_project',
@@ -431,6 +458,9 @@ export const searchProject = defineTool({
   required: ['query'],
   execute: async ({ query, repo }: { query: string; repo?: string }) => {
     const repoName = repo || query.replace(/\s+project$/i, '').trim();
+    const cacheKey = repoName.toLowerCase();
+    const cached = _projectResultCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) return cached.result;
 
     try {
       // Fetch metadata and RAG snippets in parallel
@@ -483,7 +513,7 @@ export const searchProject = defineTool({
         technologies: Array.isArray(s.techStack) ? s.techStack : undefined
       }));
 
-      return {
+      const result = {
         success: true,
         query,
         project: metaResult,
@@ -491,6 +521,8 @@ export const searchProject = defineTool({
         resultCount: snippets.length,
         snippets,
       };
+      _projectResultCache.set(cacheKey, { result, expires: Date.now() + PROJECT_CACHE_MS });
+      return result;
     } catch {
       return { success: false, error: 'Search failed' };
     }
