@@ -37,10 +37,10 @@ const accentStyles: Record<string, { bg: string; ring: string; text: string; dot
 export const VoiceFeatureGrid: React.FC = () => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.8, delay: 0.4 }}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: 0.6, delay: 0.3 }}
       className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6"
     >
       {features.map((feature, index) => {
@@ -49,10 +49,10 @@ export const VoiceFeatureGrid: React.FC = () => {
         return (
           <motion.div
             key={index}
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.15 * index }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.4, delay: 0.1 * index }}
             className="group glass rounded-2xl p-6 ring-1 ring-transparent transition-all duration-300 hover:shadow-lg"
           >
             <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl ${style.bg} mb-4`}>

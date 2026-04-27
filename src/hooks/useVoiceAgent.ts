@@ -8,14 +8,31 @@ import { meAgent } from '@/agents/MeAgent';
 import resumeData from '@/data/resume.json';
 import type { ContactFormData, CalendlyData, RichItem } from '@/components/voice/types';
 
-const adapter = openai({
-  turnDetection: {
-    type: 'server_vad',
-    threshold: 0.9,
-    prefix_padding_ms: 500,
-    silence_duration_ms: 1200,
-  },
-});
+function isMobile(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+    ('ontouchstart' in window && window.innerWidth < 768);
+}
+
+function createAdapter() {
+  const mobile = isMobile();
+  return openai({
+    turnDetection: {
+      type: 'server_vad',
+      // On mobile, speaker output bleeds into the mic causing echo-triggered
+      // barge-in loops. Use stricter settings to avoid false VAD triggers.
+      threshold: mobile ? 0.98 : 0.9,
+      prefix_padding_ms: mobile ? 300 : 500,
+      silence_duration_ms: mobile ? 2500 : 1200,
+    },
+  });
+}
+
+let _adapter: ReturnType<typeof openai> | null = null;
+function getAdapter() {
+  if (!_adapter) _adapter = createAdapter();
+  return _adapter;
+}
 
 interface UseVoiceAgentOptions {
   portfolioContext: PortfolioContext;
@@ -61,7 +78,7 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const el = document.createElement('audio');
-    el.autoplay = true;
+    el.setAttribute('playsinline', '');
     el.style.display = 'none';
     el.volume = 1.0;
     document.body.appendChild(el);
@@ -98,6 +115,9 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
 
       audioEl.muted = false;
       audioEl.volume = 1.0;
+      // Kick the audio element within the user-gesture call stack so mobile
+      // browsers unlock it before WebRTC attaches a stream.
+      audioEl.play().catch(() => {});
 
       await connect({
         getEphemeralKey: () => Promise.resolve(ephemeralKey),
@@ -105,7 +125,7 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
         audioElement: audioEl,
         extraContext: { portfolio: portfolioContext },
         outputGuardrails: [],
-        adapter,
+        adapter: getAdapter(),
       });
     } catch (error) {
       console.error('Connection failed:', error);
@@ -281,6 +301,43 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
     }
     if (isDisconnected) stopRecording();
   }, [isConnected, isDisconnected, startRecording, stopRecording]);
+
+  // Mobile half-duplex: mute the mic while the assistant is speaking to prevent
+  // speaker output from bleeding into the mic and triggering VAD barge-in.
+  const isMobileRef = useRef(false);
+  useEffect(() => { isMobileRef.current = isMobile(); }, []);
+
+  useEffect(() => {
+    if (!isConnected || !isMobileRef.current) return;
+
+    const assistantSpeaking = transcriptItems.some(
+      (item) => item.role === 'assistant' && item.status === 'IN_PROGRESS'
+    );
+
+    if (assistantSpeaking) {
+      mute(true);
+      return;
+    }
+
+    // Unmute after a short echo decay window
+    const timer = setTimeout(() => {
+      if (isConnectedRef() && isAudioPlaybackEnabled) mute(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [transcriptItems, isConnected, isAudioPlaybackEnabled, mute]);
+
+  // On mobile, backgrounding the tab kills WebRTC. Disconnect cleanly so
+  // the session doesn't end up in a broken half-connected state.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden' && isConnectedRef()) {
+        disconnectFromRealtime();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [disconnectFromRealtime]);
 
   useEffect(() => {
     return () => {

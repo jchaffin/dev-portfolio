@@ -1,35 +1,22 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 
 export const AnimatedBackground: React.FC = () => {
+  const reduced = useReducedMotion();
+
   return (
-    <div className="absolute inset-0 opacity-10">
+    <div className="absolute inset-0 opacity-10 pointer-events-none">
       <motion.div
-        className="absolute top-20 left-20 w-32 h-32 bg-accent-secondary rounded-full blur-xl"
-        animate={{
-          x: [0, 100, 0],
-          y: [0, -50, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
+        className="absolute top-20 left-20 w-32 h-32 bg-accent-secondary rounded-full blur-lg sm:blur-xl"
+        animate={reduced ? {} : { x: [0, 100, 0], y: [0, -50, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
       />
       <motion.div
-        className="absolute bottom-20 right-20 w-24 h-24 bg-accent-primary rounded-full blur-xl"
-        animate={{
-          x: [0, -80, 0],
-          y: [0, 60, 0],
-        }}
-        transition={{
-          duration: 6,
-          repeat: Infinity,
-          ease: "easeInOut",
-          delay: 2,
-        }}
+        className="absolute bottom-20 right-20 w-24 h-24 bg-accent-primary rounded-full blur-lg sm:blur-xl"
+        animate={reduced ? {} : { x: [0, -80, 0], y: [0, 60, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
       />
     </div>
   );
