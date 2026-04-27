@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import type { TranscriptItem, RichItem } from './types';
 import { LinkWithPreview } from './LinkWithPreview';
 import { ProjectLinkWithPreview } from './ProjectLinkWithPreview';
@@ -138,29 +139,52 @@ export const VoiceTranscript: React.FC<VoiceTranscriptProps> = ({ items, richIte
   }, [filteredItems, richItems]);
 
   return (
-    <>
+    <AnimatePresence initial={false} mode="popLayout">
       {mergedRows.map((row) => {
         if (row.kind === 'rich') {
           const ri = row.item;
           if (ri.type === 'project_card') {
-            return <ProjectSummaryCard key={ri.id} data={ri.data} />;
+            return (
+              <motion.div
+                key={ri.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+              >
+                <ProjectSummaryCard data={ri.data} />
+              </motion.div>
+            );
           }
           if (ri.type === 'mermaid') {
-            return <MermaidDiagram key={ri.id} definition={ri.data.definition} title={ri.data.title} />;
+            return (
+              <motion.div
+                key={ri.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+              >
+                <MermaidDiagram definition={ri.data.definition} title={ri.data.title} />
+              </motion.div>
+            );
           }
           return null;
         }
 
         const item = row.item;
         const isUser = item.role === 'user';
+        const isStreaming = item.status === 'IN_PROGRESS' && !isUser;
         const title = item.title || '';
         const displayTitle = title.startsWith('[') && title.endsWith(']')
           ? title.slice(1, -1)
           : title;
 
         return (
-          <div
+          <motion.div
             key={item.itemId}
+            layout="position"
+            initial={{ opacity: 0, x: isUser ? 20 : -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
             className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
           >
             <div
@@ -184,12 +208,19 @@ export const VoiceTranscript: React.FC<VoiceTranscriptProps> = ({ items, richIte
                   experienceLinks={experienceLinks}
                   projectLinks={projectLinks}
                 />
+                {isStreaming && (
+                  <motion.span
+                    className="inline-block w-0.5 h-[1em] bg-current ml-0.5 align-text-bottom rounded-full opacity-80"
+                    animate={{ opacity: [0.8, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity, ease: 'linear' }}
+                  />
+                )}
               </div>
             </div>
-          </div>
+          </motion.div>
         );
       })}
-    </>
+    </AnimatePresence>
   );
 };
 

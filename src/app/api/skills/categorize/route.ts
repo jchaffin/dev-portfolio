@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cacheGet, cacheSet, cacheKey, hashKey } from '@/lib/redis'
 import { SKILL_CATEGORIES } from '@/lib/constants'
 
+// Model download + WASM init on cold start can take 30–60 s
+export const maxDuration = 60
+
 const CACHE_TTL = 3600 // 1 hour
 
 let _pipelinePromise: Promise<any> | null = null

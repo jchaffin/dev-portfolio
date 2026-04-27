@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Mic } from 'lucide-react';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -12,7 +12,7 @@ interface ChatInputProps {
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSend,
   disabled = false,
-  placeholder = 'Type a message...',
+  placeholder = 'Type a message…',
 }) => {
   const [value, setValue] = useState('');
 
@@ -25,26 +25,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="px-6 pb-6 pt-4">
-      <form onSubmit={handleSubmit} className="flex items-center gap-3">
-        <div className="flex-1 bg-theme-tertiary rounded-lg h-12 flex items-center px-3 border border-theme-secondary/60">
+    <div className="px-4 pb-4 pt-3">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2 bg-theme-tertiary rounded-xl h-11 px-3 border border-theme-secondary/40 focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/30 transition-all duration-200">
+          <Mic className="w-4 h-4 text-indigo-400 shrink-0" />
           <input
             type="text"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={placeholder}
             disabled={disabled}
-            className="w-full bg-transparent text-theme-primary placeholder-theme-secondary/70 focus:outline-none disabled:opacity-50"
+            className="flex-1 bg-transparent text-sm text-theme-primary placeholder-theme-secondary/60 focus:outline-none disabled:opacity-50"
             aria-label="Chat message input"
           />
         </div>
         <button
           type="submit"
           disabled={!value.trim() || disabled}
-          className="h-12 w-12 rounded-lg bg-theme-tertiary text-theme-secondary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer flex items-center justify-center border border-theme-secondary/60"
+          className="h-11 w-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-200 cursor-pointer flex items-center justify-center shrink-0"
           aria-label="Send message"
         >
-          <Send className="w-6 h-6" />
+          <Send className="w-4 h-4" />
         </button>
       </form>
     </div>

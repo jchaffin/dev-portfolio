@@ -171,11 +171,15 @@ const VoiceAIContent = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-6xl font-bold mb-6 text-primary">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-sm text-indigo-600 dark:text-indigo-400 mb-5">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+            GPT-4o Realtime · WebRTC
+          </div>
+          <h2 className="text-4xl md:text-6xl font-bold mb-4 text-primary">
             Voice Agent
           </h2>
           <p className="text-xl text-secondary max-w-3xl mx-auto">
-            Realtime Conversational AI.
+            Ask me anything about Jacob — his work, projects, or background.
           </p>
         </motion.div>
 
@@ -251,13 +255,30 @@ const VoiceAIContent = () => {
                       onToggle={toggleConnection}
                     />
 
-                    <p className="text-sm text-theme-secondary text-center mb-4">
-                      {sessionStatus === 'CONNECTING'
-                        ? 'Connecting...'
-                        : sessionStatus === 'CONNECTED'
-                          ? 'Connected! Waiting for response...'
+                    {sessionStatus === 'CONNECTED' ? (
+                      <div className="flex items-end gap-1 h-6 mb-4">
+                        {[0.5, 0.8, 1, 0.6, 0.9, 0.7, 1, 0.8, 0.5].map((h, i) => (
+                          <motion.div
+                            key={i}
+                            className="w-1 bg-indigo-400/60 dark:bg-indigo-400/70 rounded-full"
+                            style={{ height: `${h * 24}px` }}
+                            animate={{ scaleY: [1, 0.35, 1] }}
+                            transition={{
+                              duration: 0.9 + i * 0.07,
+                              repeat: Infinity,
+                              ease: 'easeInOut',
+                              delay: i * 0.08,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-theme-secondary text-center mb-4">
+                        {sessionStatus === 'CONNECTING'
+                          ? 'Connecting…'
                           : 'Click to start, or choose an option below'}
-                    </p>
+                      </p>
+                    )}
 
                     {/* Show suggestions as chips when disconnected */}
                     {sessionStatus === 'DISCONNECTED' && (

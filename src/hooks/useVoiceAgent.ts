@@ -78,6 +78,7 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const el = document.createElement('audio');
+    el.autoplay = true;
     el.setAttribute('playsinline', '');
     el.style.display = 'none';
     el.volume = 1.0;
@@ -328,8 +329,9 @@ export function useVoiceAgent({ portfolioContext }: UseVoiceAgentOptions) {
 
   // On mobile, backgrounding the tab kills WebRTC. Disconnect cleanly so
   // the session doesn't end up in a broken half-connected state.
+  // Desktop browsers keep WebRTC alive in background tabs, so skip there.
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === 'undefined' || !isMobileRef.current) return;
     const onVisibility = () => {
       if (document.visibilityState === 'hidden' && isConnectedRef()) {
         disconnectFromRealtime();

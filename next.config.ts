@@ -11,10 +11,12 @@ const nextConfig: NextConfig = {
     // Disable strict mode for more lenient builds
     forceSwcTransforms: false,
   },
-  // sharp must stay external (native binary). @xenova/transformers is intentionally
-  // NOT listed here so the bundler can process it and apply the onnxruntime-node alias
-  // below — substituting the WASM backend for the native binary (which fails on Vercel).
-  serverExternalPackages: ["sharp", "onnxruntime-node"],
+  // sharp must stay external (native binary). @xenova/transformers and
+  // onnxruntime-node are intentionally NOT listed here so webpack can apply
+  // the alias below — substituting the WASM backend (onnxruntime-web) for
+  // the native binary, which fails on Vercel because libonnxruntime.so is
+  // not on LD_LIBRARY_PATH in the Lambda environment.
+  serverExternalPackages: ["sharp"],
   turbopack: {
     resolveAlias: {
       // Redirect native onnxruntime-node to the WASM build so no platform binary is needed.
